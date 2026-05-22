@@ -117,7 +117,7 @@ export default function MatchCard({ match, isEditable, userId }: Props) {
     const isCorrect  = match.is_finished && match.result === value && selected === value
     const isWrong    = match.is_finished && match.result !== value && selected === value
 
-    if (isCorrect) return 'bg-pitch-600 border-pitch-400 text-white'
+    if (isCorrect) return 'bg-verde-500 border-verde-400 text-white'
     if (isWrong)   return 'bg-red-900/60 border-red-600 text-red-300'
     if (isSelected && !match.is_finished) return 'bg-brand-500 border-brand-400 text-white shadow-lg shadow-brand-900/40'
     return 'bg-pitch-800/60 border-pitch-600/50 text-pitch-300 hover:bg-pitch-700/60 hover:text-white hover:border-pitch-500'
