@@ -7,43 +7,55 @@ export interface Database {
         Row: Profile
         Insert: Omit<Profile, 'created_at' | 'updated_at'>
         Update: Partial<Omit<Profile, 'id'>>
+        Relationships: []
       }
       picks: {
-        Row: Pick
-        Insert: Omit<Pick, 'id' | 'created_at' | 'updated_at' | 'predicted_result' | 'points_earned' | 'is_exact' | 'is_correct'>
-        Update: Partial<Omit<Pick, 'id' | 'user_id' | 'match_id'>>
+        Row: UserPick
+        Insert: Omit<UserPick, 'id' | 'created_at' | 'updated_at' | 'predicted_result' | 'points_earned' | 'is_exact' | 'is_correct'>
+        Update: Partial<Omit<UserPick, 'id' | 'user_id' | 'match_id'>>
+        Relationships: []
       }
       matches: {
         Row: Match
         Insert: Omit<Match, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Match, 'id'>>
+        Relationships: []
       }
       teams: {
         Row: Team
         Insert: Omit<Team, 'id' | 'created_at'>
         Update: Partial<Omit<Team, 'id'>>
+        Relationships: []
       }
       standings: {
         Row: Standing
         Insert: Omit<Standing, 'id' | 'updated_at'>
         Update: Partial<Omit<Standing, 'id' | 'user_id'>>
+        Relationships: []
       }
       quiniela_config: {
         Row: QuinielaConfig
         Insert: Partial<QuinielaConfig>
         Update: Partial<QuinielaConfig>
+        Relationships: []
       }
       change_logs: {
         Row: ChangeLog
         Insert: Omit<ChangeLog, 'id' | 'created_at'>
-        Update: never
+        Update: Partial<ChangeLog>
+        Relationships: []
       }
       prize_distribution: {
         Row: PrizeDistribution
         Insert: Omit<PrizeDistribution, 'id' | 'calculated_at'>
-        Update: never
+        Update: Partial<PrizeDistribution>
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }
 
@@ -59,7 +71,7 @@ export interface Profile {
   updated_at: string
 }
 
-export interface Pick {
+export interface UserPick {
   id: string
   user_id: string
   match_id: string
@@ -158,7 +170,7 @@ export interface MatchWithTeams extends Match {
   home_team: Team | null
   away_team: Team | null
   winner: Team | null
-  user_pick?: Pick | null
+  user_pick?: UserPick | null
 }
 
 export interface StandingWithProfile extends Standing {

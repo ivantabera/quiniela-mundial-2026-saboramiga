@@ -29,7 +29,7 @@ export default function ResultadosClient({ matches: initial }: { matches: Match[
   const [groupFilter, setGroupFilter] = useState('A')
   const [showFinished, setShowFinished] = useState(false)
 
-  const groups = [...new Set(initial.map(m => m.group_name).filter(Boolean))].sort() as string[]
+  const groups = Array.from(new Set(initial.map(m => m.group_name).filter(Boolean))).sort() as string[]
 
   const filtered = matches.filter(m => {
     if (m.group_name !== groupFilter) return false

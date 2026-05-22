@@ -5,8 +5,6 @@ import { createServerClient } from '@supabase/ssr'
 const PROTECTED_ROUTES = ['/dashboard', '/admin']
 // Rutas de API que modifican picks (bloqueadas cuando quiniela está cerrada)
 const PICK_MUTATION_ROUTES = ['/api/picks']
-// Rutas exclusivas de admin
-const ADMIN_ROUTES = ['/admin', '/api/admin']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -19,13 +17,13 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
+        setAll: (cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) => {
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
           response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, options as any)
           )
         },
       },
