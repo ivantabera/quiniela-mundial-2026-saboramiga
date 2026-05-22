@@ -32,7 +32,7 @@ export function getQuinielaState(closeDateISO: string, isManuallyOpen = false): 
       closeDate,
       hoursRemaining,
       secondsRemaining,
-      label: 'Abierta (Admin)',
+      label: 'Abierta',
       color: 'green',
       canEdit: true,
     }

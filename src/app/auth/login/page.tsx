@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
@@ -30,8 +31,9 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="font-display text-4xl text-white tracking-widest">
-            ⚽ MUNDIAL 2026
+          <Link href="/" className="inline-flex flex-col items-center gap-3 hover:opacity-80 transition-opacity">
+            <Image src="/logo-azul-crema.png" alt="Sabor a Miga" width={120} height={120} className="rounded-2xl" />
+            <span className="font-display text-3xl text-white tracking-widest">MUNDIAL 2026</span>
           </Link>
           <p className="text-pitch-400 mt-2">Inicia sesión en tu quiniela</p>
         </div>

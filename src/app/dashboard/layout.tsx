@@ -11,7 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await createAdminSupabaseClient()
     .from('profiles')
-    .select('username, is_admin, full_name')
+    .select('username, is_admin, full_name, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -21,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         username={profile?.username ?? 'Usuario'}
         fullName={profile?.full_name ?? ''}
         isAdmin={profile?.is_admin ?? false}
+        avatarUrl={profile?.avatar_url ?? null}
       />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         {children}

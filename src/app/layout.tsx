@@ -17,7 +17,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Quiniela Mundial 2026 | Sabor a Miga',
   description: 'La quiniela oficial del Mundial 2026. ¡Haz tus predicciones y gana la bolsa!',
-  icons: { icon: '/favicon.ico' },
+  icons: { icon: '/favicon.png' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

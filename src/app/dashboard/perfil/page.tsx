@@ -1,4 +1,6 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import Image from 'next/image'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
+import AvatarEditor from '@/components/perfil/AvatarEditor'
 
 export const dynamic = 'force-dynamic'
 
@@ -6,8 +8,9 @@ export default async function PerfilPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const admin = createAdminSupabaseClient()
   const [profileRes, standingRes, recentPicksRes] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user!.id).single(),
+    admin.from('profiles').select('*').eq('id', user!.id).single(),
     supabase.from('standings').select('*').eq('user_id', user!.id).single(),
     supabase.from('picks').select(`
       *,
@@ -30,19 +33,31 @@ export default async function PerfilPage() {
       </div>
 
       {/* Tarjeta de perfil */}
-      <div className="card p-6 flex items-center gap-6">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pitch-600 to-brand-600 flex items-center justify-center text-3xl font-display text-white flex-shrink-0">
-          {profile?.username?.[0]?.toUpperCase() ?? '?'}
+      <div className="card p-6 space-y-5">
+        <div className="flex items-center gap-5">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-pitch-800 flex-shrink-0 ring-2 ring-brand-500/50">
+            {profile?.avatar_url ? (
+              <Image src={profile.avatar_url} alt="Avatar" width={80} height={80} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-3xl font-display text-white">
+                {profile?.username?.[0]?.toUpperCase() ?? '?'}
+              </div>
+            )}
+          </div>
+          <div>
+            <h2 className="font-display text-3xl text-white">{profile?.username}</h2>
+            <p className="text-pitch-400">{profile?.full_name}</p>
+            <p className="text-pitch-500 text-xs mt-1">{user?.email}</p>
+            {profile?.is_admin && (
+              <span className="inline-block mt-2 text-xs bg-brand-900/60 text-brand-300 border border-brand-700 px-2 py-0.5 rounded-full">
+                ⚙️ Administrador
+              </span>
+            )}
+          </div>
         </div>
-        <div>
-          <h2 className="font-display text-3xl text-white">{profile?.username}</h2>
-          <p className="text-pitch-400">{profile?.full_name}</p>
-          <p className="text-pitch-500 text-xs mt-1">{user?.email}</p>
-          {profile?.is_admin && (
-            <span className="inline-block mt-2 text-xs bg-brand-900/60 text-brand-300 border border-brand-700 px-2 py-0.5 rounded-full">
-              ⚙️ Administrador
-            </span>
-          )}
+
+        <div className="border-t border-pitch-800 pt-5">
+          <AvatarEditor userId={user!.id} currentAvatar={profile?.avatar_url ?? null} />
         </div>
       </div>
 

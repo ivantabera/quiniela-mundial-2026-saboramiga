@@ -2,9 +2,19 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
+
+const AVATARS = [
+  '/avatars/mascota-1.png',
+  '/avatars/mascota-2.png',
+  '/avatars/mascota-cafe.png',
+  '/avatars/mascota-rol.png',
+  '/avatars/mascota-rol-cafe.png',
+  '/avatars/mascota.png',
+]
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -35,12 +45,14 @@ export default function RegisterPage() {
       return
     }
 
-    // 2. Crear perfil en tabla profiles
+    // 2. Crear perfil con avatar aleatorio
     if (data.user) {
+      const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)]
       const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         username: form.username,
         full_name: form.full_name,
+        avatar_url: randomAvatar,
       })
       if (profileError) {
         toast.error('Error al crear perfil: ' + profileError.message)
@@ -58,8 +70,9 @@ export default function RegisterPage() {
     <main className="min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="font-display text-4xl text-white tracking-widest">
-            ⚽ MUNDIAL 2026
+          <Link href="/" className="inline-flex flex-col items-center gap-3 hover:opacity-80 transition-opacity">
+            <Image src="/logo-azul-crema.png" alt="Sabor a Miga" width={120} height={120} className="rounded-2xl" />
+            <span className="font-display text-3xl text-white tracking-widest">MUNDIAL 2026</span>
           </Link>
           <p className="text-pitch-400 mt-2">Crea tu cuenta y participa</p>
         </div>
