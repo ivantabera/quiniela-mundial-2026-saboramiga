@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   // Validación doble en backend — independiente del middleware
-  const adminSupabase = await createAdminSupabaseClient()
+  const adminSupabase = createAdminSupabaseClient()
   const { data: config } = await adminSupabase
     .from('quiniela_config')
     .select('close_date, is_manually_open')

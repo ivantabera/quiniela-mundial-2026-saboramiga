@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = await createAdminSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  const { data: profile } = await supabase
+  const adminSupabase = createAdminSupabaseClient()
+  const { data: profile } = await adminSupabase
     .from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin)
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { home_score, away_score, is_finished } = await req.json()
-  const adminSupabase = await createAdminSupabaseClient()
+  const { result, is_finished } = await req.json()
 
-  // Determinar resultado
-  const result = home_score > away_score ? 'home' : away_score > home_score ? 'away' : 'draw'
+  if (!['home', 'draw', 'away'].includes(result)) {
+    return NextResponse.json({ error: 'Resultado inválido' }, { status: 400 })
+  }
 
   // Obtener ganador
   let winner_id: string | null = null
@@ -27,10 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data, error } = await adminSupabase
     .from('matches')
-    .update({
-      home_score, away_score, result, winner_id,
-      is_finished, updated_at: new Date().toISOString(),
-    })
+    .update({ result, winner_id, is_finished, updated_at: new Date().toISOString() })
     .eq('id', params.id)
     .select()
     .single()

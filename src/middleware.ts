@@ -46,25 +46,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // ── 3. Verificar rol admin para rutas de administración ─────────────
-  const isAdminRoute = ADMIN_ROUTES.some(r => pathname.startsWith(r))
-  if (isAdminRoute && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.is_admin) {
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json(
-          { error: 'No autorizado', code: 'NOT_ADMIN' },
-          { status: 403 }
-        )
-      }
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-  }
+  // ── 3. Check de admin lo maneja cada route handler con createAdminSupabaseClient ──
 
   // ── 4. BLOQUEO DE QUINIELA — Validación en servidor (UTC) ────────────
   const isPickMutation =

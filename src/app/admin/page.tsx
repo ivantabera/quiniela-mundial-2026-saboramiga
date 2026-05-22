@@ -1,20 +1,27 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createAdminSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import AdminConfigForm from '@/components/admin/AdminConfigForm'
 import AdminMatchResults from '@/components/admin/AdminMatchResults'
+import AdminParticipants from '@/components/admin/AdminParticipants'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPage() {
-  const supabase = await createAdminSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
+  const supabase = createAdminSupabaseClient()
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('is_admin')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single()
+
+  console.log('[ADMIN] user.id:', user.id)
+  console.log('[ADMIN] profile:', profile)
+  console.log('[ADMIN] profileError:', profileError)
 
   if (!profile?.is_admin) redirect('/dashboard')
 
@@ -56,6 +63,12 @@ export default async function AdminPage() {
               <div className="text-pitch-400 text-sm">{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Participantes y pagos */}
+        <div className="card p-6">
+          <h2 className="font-display text-2xl text-white mb-6 tracking-wide">👥 Participantes y Pagos</h2>
+          <AdminParticipants />
         </div>
 
         {/* Configuración quiniela */}

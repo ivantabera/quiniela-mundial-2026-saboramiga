@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 
-export async function PATCH(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const authClient = await createServerSupabaseClient()
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
@@ -12,24 +12,11 @@ export async function PATCH(req: NextRequest) {
   if (!profile?.is_admin)
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const body = await req.json()
-
   const { data, error } = await adminSupabase
-    .from('quiniela_config')
-    .update({ ...body, updated_by: user.id, updated_at: new Date().toISOString() })
-    .eq('id', '00000000-0000-0000-0000-000000000001')
-    .select()
-    .single()
+    .from('profiles')
+    .select('id, username, full_name, inscription_paid, is_active, created_at')
+    .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  // Log del cambio
-  await adminSupabase.from('change_logs').insert({
-    user_id: user.id, action: 'admin_config_change',
-    table_name: 'quiniela_config', record_id: data.id,
-    new_data: body as Record<string, unknown>,
-    ip_address: req.headers.get('x-forwarded-for') ?? 'unknown',
-  })
-
   return NextResponse.json({ data })
 }

@@ -11,19 +11,16 @@ interface Props {
 }
 
 export default function CountdownBanner({ closeDate, status, compact = false }: Props) {
-  const [secondsLeft, setSecondsLeft] = useState(
-    Math.max(0, Math.floor((new Date(closeDate).getTime() - Date.now()) / 1000))
-  )
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSecondsLeft(prev => {
-        const next = Math.max(0, Math.floor((new Date(closeDate).getTime() - Date.now()) / 1000))
-        return next
-      })
-    }, 1000)
+    const calc = () => Math.max(0, Math.floor((new Date(closeDate).getTime() - Date.now()) / 1000))
+    setSecondsLeft(calc())
+    const interval = setInterval(() => setSecondsLeft(calc()), 1000)
     return () => clearInterval(interval)
   }, [closeDate])
+
+  if (secondsLeft === null) return null
 
   const { days, hours, minutes, seconds } = formatCountdown(secondsLeft)
 
