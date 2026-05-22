@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import NavBar from '@/components/shared/NavBar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
+  const { data: profile } = await createAdminSupabaseClient()
     .from('profiles')
     .select('username, is_admin, full_name')
     .eq('id', user.id)
