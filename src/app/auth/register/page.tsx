@@ -7,14 +7,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 
-const AVATARS = [
-  '/avatars/mascota-1.png',
-  '/avatars/mascota-2.png',
-  '/avatars/mascota-cafe.png',
-  '/avatars/mascota-rol.png',
-  '/avatars/mascota-rol-cafe.png',
-  '/avatars/mascota.png',
-]
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -45,17 +37,20 @@ export default function RegisterPage() {
       return
     }
 
-    // 2. Crear perfil con avatar aleatorio
+    // 2. Crear perfil vía servidor (admin client bypasses RLS — no requiere sesión activa)
     if (data.user) {
-      const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)]
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        username: form.username,
-        full_name: form.full_name,
-        avatar_url: randomAvatar,
+      const res = await fetch('/api/auth/create-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: data.user.id,
+          username: form.username,
+          full_name: form.full_name,
+        }),
       })
-      if (profileError) {
-        toast.error('Error al crear perfil: ' + profileError.message)
+      if (!res.ok) {
+        const { error } = await res.json()
+        toast.error(error ?? 'Error al crear perfil')
         setLoading(false)
         return
       }
