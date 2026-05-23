@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 
+const INSCRIPTION_FEE = 100
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const authClient = await createServerSupabaseClient()
   const { data: { user } } = await authClient.auth.getUser()
@@ -14,7 +16,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { inscription_paid } = await req.json()
 
-  // Actualizar perfil del participante
   const { error: profileError } = await adminSupabase
     .from('profiles')
     .update({ inscription_paid, updated_at: new Date().toISOString() })
@@ -22,28 +23,29 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 })
 
-  // Ajustar pool_amount: +100 si paga, -100 si se revierte
+  // Sumar o restar $100 a la bolsa acumulada
   const { data: config } = await adminSupabase
     .from('quiniela_config')
     .select('id, pool_amount')
     .single()
 
+  let newPoolAmount = 0
   if (config) {
-    const newAmount = Math.max(0, config.pool_amount + (inscription_paid ? 100 : -100))
+    newPoolAmount = Math.max(0, config.pool_amount + (inscription_paid ? INSCRIPTION_FEE : -INSCRIPTION_FEE))
     await adminSupabase
       .from('quiniela_config')
-      .update({ pool_amount: newAmount, updated_by: user.id, updated_at: new Date().toISOString() })
+      .update({ pool_amount: newPoolAmount, updated_by: user.id, updated_at: new Date().toISOString() })
       .eq('id', config.id)
   }
 
   await adminSupabase.from('change_logs').insert({
-    user_id: user.id,
-    action: inscription_paid ? 'payment_confirmed' : 'payment_reverted',
+    user_id:    user.id,
+    action:     inscription_paid ? 'payment_confirmed' : 'payment_reverted',
     table_name: 'profiles',
-    record_id: params.id,
-    new_data: { inscription_paid } as Record<string, unknown>,
+    record_id:  params.id,
+    new_data:   { inscription_paid, pool_amount: newPoolAmount } as Record<string, unknown>,
     ip_address: req.headers.get('x-forwarded-for') ?? 'unknown',
   })
 
-  return NextResponse.json({ ok: true, pool_amount: config ? Math.max(0, config.pool_amount + (inscription_paid ? 100 : -100)) : null })
+  return NextResponse.json({ ok: true, pool_amount: newPoolAmount })
 }

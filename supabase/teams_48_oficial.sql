@@ -28,7 +28,7 @@ INSERT INTO public.teams (name, short_name, group_name, flag_emoji) VALUES
   -- GRUPO C — Sede: Estados Unidos (Este)
   ('Brasil',              'BRA', 'C', '🇧🇷'),
   ('Marruecos',           'MAR', 'C', '🇲🇦'),
-  ('Escocia',             'SCO', 'C', '🏴󠁧󠁢󠁳󠁣󠁴󠁿'),
+  ('Escocia',             'SCO', 'C', '🇬🇧'),
   ('Haití',               'HAI', 'C', '🇭🇹'),
 
   -- GRUPO D — Sede: Estados Unidos (Oeste)
@@ -80,7 +80,7 @@ INSERT INTO public.teams (name, short_name, group_name, flag_emoji) VALUES
   ('Rep. Dem. del Congo', 'COD', 'K', '🇨🇩'),
 
   -- GRUPO L — Sede: Estados Unidos (Este) / Canadá
-  ('Inglaterra',          'ENG', 'L', '🏴󠁧󠁢󠁥󠁮󠁧󠁿'),
+  ('Inglaterra',          'ENG', 'L', '🇬🇧'),
   ('Croacia',             'CRO', 'L', '🇭🇷'),
   ('Panamá',              'PAN', 'L', '🇵🇦'),
   ('Ghana',               'GHA', 'L', '🇬🇭');

@@ -16,17 +16,25 @@ export default function AdminParticipants() {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<string | null>(null)
-  const [poolAmount, setPoolAmount] = useState<number | null>(null)
+  const [poolAmount, setPoolAmount] = useState<number>(0)
+  const [currency, setCurrency]     = useState<string>('MXN')
 
   useEffect(() => {
     fetch('/api/admin/participants')
       .then(r => r.json())
-      .then(d => { setParticipants(d.data ?? []); setLoading(false) })
+      .then(d => {
+        setParticipants(d.data ?? [])
+        setPoolAmount(d.pool_amount ?? 0)
+        setCurrency(d.currency ?? 'MXN')
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
   const paid   = participants.filter(p => p.inscription_paid)
   const unpaid = participants.filter(p => !p.inscription_paid)
+
+  // pool_amount en DB = bolsa acumulada real (crece $100 por cada pago)
 
   async function togglePaid(participant: Participant) {
     setToggling(participant.id)
@@ -41,7 +49,7 @@ export default function AdminParticipants() {
       setParticipants(prev =>
         prev.map(p => p.id === participant.id ? { ...p, inscription_paid: newVal } : p)
       )
-      if (json.pool_amount !== null) setPoolAmount(json.pool_amount)
+      if (typeof json.pool_amount === 'number') setPoolAmount(json.pool_amount)
       toast.success(newVal ? `✅ ${participant.username} marcado como pagado` : `↩️ Pago revertido`)
     } else {
       toast.error(json.error ?? 'Error al actualizar')
@@ -65,9 +73,9 @@ export default function AdminParticipants() {
         </div>
         <div className="bg-pitch-800/50 rounded-xl p-4 text-center">
           <div className="font-display text-2xl text-yellow-400">
-            ${poolAmount !== null ? poolAmount.toLocaleString('es-MX') : (paid.length * 100).toLocaleString('es-MX')}
+            ${poolAmount.toLocaleString('es-MX')}
           </div>
-          <div className="text-pitch-400 text-xs uppercase tracking-wider mt-1">Bolsa MXN</div>
+          <div className="text-pitch-400 text-xs uppercase tracking-wider mt-1">Bolsa acumulada {currency}</div>
         </div>
       </div>
 
@@ -96,6 +104,36 @@ export default function AdminParticipants() {
           <p className="text-pitch-500 text-center py-6">Aún no hay participantes registrados</p>
         )}
       </div>
+
+      {/* Vista previa de reparto — reactivo, se recalcula al cambiar pagados */}
+      {poolAmount > 0 && (
+        <div className="bg-pitch-800/30 rounded-xl px-4 py-4 border border-pitch-700/40">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-pitch-300 text-xs uppercase tracking-wider">💰 Vista previa de reparto</p>
+            <span className="text-pitch-500 text-xs">
+              {paid.length} pagados · bolsa:{' '}
+              <span className="text-yellow-400 font-medium">${poolAmount.toLocaleString('es-MX')} {currency}</span>
+            </span>
+          </div>
+          {poolAmount === 0 ? (
+            <p className="text-pitch-500 text-sm text-center py-2">Aún no hay pagos registrados</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map(n => (
+                <div key={n} className="bg-pitch-800/60 rounded-lg px-3 py-2.5 text-center">
+                  <div className="text-pitch-400 text-xs mb-1">
+                    {n} ganador{n > 1 ? 'es' : ''}
+                  </div>
+                  <div className="text-white font-semibold text-sm">
+                    ${(poolAmount / n).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-pitch-500 text-xs">c/u</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

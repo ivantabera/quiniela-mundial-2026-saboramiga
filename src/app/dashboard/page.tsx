@@ -87,10 +87,16 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Bolsa */}
+      {/* Bolsa y reparto */}
       {config && (
-        <div className="text-center">
-          <PoolDisplay amount={config.pool_amount} currency={config.currency} large />
+        <div className="flex justify-center">
+          <PoolDisplay
+            amount={config.pool_amount}
+            currency={config.currency}
+            large
+            showReparto
+            tiebreakEnabled={config.tiebreak_enabled}
+          />
         </div>
       )}
 

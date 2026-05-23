@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getQuinielaState } from '@/lib/utils/quiniela-status'
 import MatchCard from '@/components/quiniela/MatchCard'
 import QuinielaLocked from '@/components/quiniela/QuinielaLocked'
+import QuinielaExportButtons from '@/components/quiniela/QuinielaExportButtons'
 import type { MatchWithTeams } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +11,7 @@ export default async function QuinielaPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [configRes, matchesRes] = await Promise.all([
+  const [configRes, matchesRes, profileRes] = await Promise.all([
     supabase.from('quiniela_config').select('*').single(),
     supabase
       .from('matches')
@@ -21,10 +22,12 @@ export default async function QuinielaPage() {
         winner:winner_id(id, name, short_name, flag_emoji, group_name)
       `)
       .order('match_date', { ascending: true }),
+    supabase.from('profiles').select('username, full_name').eq('id', user!.id).single(),
   ])
 
-  const config = configRes.data
-  const state  = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
+  const config   = configRes.data
+  const state    = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
+  const username = profileRes.data?.username || profileRes.data?.full_name || 'usuario'
 
   // 👇 AGREGA AQUÍ
   console.log('CONFIG:', config)
@@ -39,6 +42,10 @@ export default async function QuinielaPage() {
     .eq('user_id', user!.id)
 
   const picksMap = new Map(userPicks?.map(p => [p.match_id, p]) ?? [])
+
+  const lastModified = userPicks && userPicks.length > 0
+    ? userPicks.reduce((max, p) => p.updated_at > max ? p.updated_at : max, userPicks[0].updated_at)
+    : null
 
   // Combinar picks con partidos
   const matchesWithPicks: MatchWithTeams[] = (matchesRes.data ?? []).map(m => ({
@@ -73,6 +80,25 @@ export default async function QuinielaPage() {
           </div>
         )}
       </div>
+
+      {config && (() => {
+        const dateFmt = { day: '2-digit' as const, month: 'long' as const, year: 'numeric' as const, hour: '2-digit' as const, minute: '2-digit' as const }
+        const closeDateFormatted = new Date(config.close_date).toLocaleString('es-MX', dateFmt)
+        const lastModFormatted = lastModified
+          ? new Date(lastModified).toLocaleString('es-MX', dateFmt)
+          : 'Sin modificaciones aun'
+        return (
+          <QuinielaExportButtons
+            username={username}
+            matches={matchesWithPicks}
+            isClosed={!state?.isOpen}
+            closeDateFormatted={closeDateFormatted}
+            lastModFormatted={lastModFormatted}
+            poolAmount={config.pool_amount}
+            currency={config.currency}
+          />
+        )
+      })()}
 
       {!state?.isOpen && <QuinielaLocked />}
 

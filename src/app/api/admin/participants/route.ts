@@ -12,11 +12,22 @@ export async function GET(req: NextRequest) {
   if (!profile?.is_admin)
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { data, error } = await adminSupabase
-    .from('profiles')
-    .select('id, username, full_name, inscription_paid, is_active, created_at')
-    .order('created_at', { ascending: true })
+  const [profilesRes, configRes] = await Promise.all([
+    adminSupabase
+      .from('profiles')
+      .select('id, username, full_name, inscription_paid, is_active, created_at')
+      .order('created_at', { ascending: true }),
+    adminSupabase
+      .from('quiniela_config')
+      .select('pool_amount, currency')
+      .single(),
+  ])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+  if (profilesRes.error) return NextResponse.json({ error: profilesRes.error.message }, { status: 500 })
+
+  return NextResponse.json({
+    data:        profilesRes.data,
+    pool_amount: configRes.data?.pool_amount ?? 0,
+    currency:    configRes.data?.currency ?? 'MXN',
+  })
 }

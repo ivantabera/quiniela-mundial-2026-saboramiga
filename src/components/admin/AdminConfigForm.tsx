@@ -55,7 +55,7 @@ export default function AdminConfigForm({ config }: Props) {
 
       {/* Bolsa */}
       <div>
-        <label className="block text-sm text-pitch-300 mb-2">💰 Bolsa total ({form.currency})</label>
+        <label className="block text-sm text-pitch-300 mb-2">💰 Bolsa acumulada ({form.currency})</label>
         <div className="flex gap-2">
           <input
             type="number"
@@ -102,19 +102,6 @@ export default function AdminConfigForm({ config }: Props) {
             onChange={e => setForm(f => ({ ...f, tiebreak_enabled: e.target.checked }))}
           />
         </label>
-      </div>
-
-      {/* Simulación de reparto */}
-      <div className="bg-pitch-800/30 rounded-xl px-4 py-4">
-        <p className="text-pitch-300 text-xs uppercase tracking-wider mb-2">Vista previa de reparto</p>
-        {[1, 2, 3, 4].map(n => (
-          <div key={n} className="flex justify-between text-sm py-1">
-            <span className="text-pitch-400">{n} ganador{n > 1 ? 'es' : ''}</span>
-            <span className="text-white font-semibold">
-              ${(form.pool_amount / n).toLocaleString('es-MX', { minimumFractionDigits: 2 })} c/u
-            </span>
-          </div>
-        ))}
       </div>
 
       <div className="md:col-span-2 flex justify-end">
