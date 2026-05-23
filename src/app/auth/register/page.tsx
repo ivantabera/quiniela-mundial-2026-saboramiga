@@ -56,8 +56,10 @@ export default function RegisterPage() {
       }
     }
 
-    toast.success('¡Cuenta creada! Revisa tu correo para confirmar.')
-    router.push('/dashboard')
+    toast.success(
+      `¡Listo, ${form.username}! Te enviamos un correo a ${form.email} — confírmalo antes de entrar.`,
+      { duration: 8000, icon: '📧' }
+    )
     setLoading(false)
   }
 
