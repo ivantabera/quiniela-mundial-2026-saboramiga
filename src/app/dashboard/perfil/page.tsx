@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import AvatarEditor from '@/components/perfil/AvatarEditor'
+import ChangePasswordForm from '@/components/perfil/ChangePasswordForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,12 @@ export default async function PerfilPage() {
             style={{ width: `${standing?.completion_pct ?? 0}%` }}
           />
         </div>
+      </div>
+
+      {/* Cambiar contraseña */}
+      <div className="card p-6">
+        <h3 className="font-display text-xl text-white mb-4 tracking-wide">🔐 Cambiar contraseña</h3>
+        <ChangePasswordForm />
       </div>
 
       {/* Últimos resultados */}

@@ -64,6 +64,10 @@ export default function LoginPage() {
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? 'Ingresando...' : 'Entrar'}
           </button>
+
+          <p className="text-center text-pitch-600 text-xs">
+            ¿Olvidaste tu contraseña? Contacta al administrador.
+          </p>
         </form>
 
         <p className="text-center text-pitch-400 mt-6 text-sm">

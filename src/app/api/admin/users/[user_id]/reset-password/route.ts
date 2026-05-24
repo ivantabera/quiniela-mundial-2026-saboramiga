@@ -21,25 +21,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
   }
 
-  // Rechazar pago y revertir inscription_paid en un solo update
-  const { data, error } = await admin
-    .from('profiles')
-    .update({ payment_status: 'rechazado' })
-    .eq('id', user_id)
-    .select('id, payment_status')
-    .single()
+  const { password } = await req.json()
+  if (!password || password.length < 8) {
+    return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+  }
 
+  const { error } = await admin.auth.admin.updateUserById(user_id, { password })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!data) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-
-  await admin.from('change_logs').insert({
-    user_id:    user.id,
-    action:     'payment_rejected',
-    table_name: 'profiles',
-    record_id:  user_id,
-    new_data:   { payment_status: 'rechazado', rejected_by: user.id },
-    ip_address: req.headers.get('x-forwarded-for') ?? 'unknown',
-  })
 
   return NextResponse.json({ ok: true })
 }

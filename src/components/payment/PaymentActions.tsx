@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function PaymentActions({ paymentStatus, whatsapp, amount, username, fullName, currency }: Props) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState(paymentStatus)
 
@@ -32,6 +34,7 @@ export default function PaymentActions({ paymentStatus, whatsapp, amount, userna
       if (res.ok) {
         setStatus('pendiente_verificacion')
         toast.success('¡Listo! Te avisamos cuando confirmemos tu pago.', { duration: 6000 })
+        router.refresh()
       } else {
         toast.error(json.error ?? 'Ocurrió un error')
       }
