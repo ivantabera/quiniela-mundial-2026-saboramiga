@@ -61,10 +61,6 @@ export default function RegisterPage() {
       }
     }
 
-    toast.success(
-      `¡Listo, ${form.username}! Te enviamos un correo a ${form.email} — confírmalo antes de entrar.`,
-      { duration: 8000, icon: '📧' }
-    )
     setLoading(false)
     router.push('/dashboard')
   }
