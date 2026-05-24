@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 interface Profile {
@@ -36,6 +37,7 @@ interface Config {
 }
 
 export default function PagosAdminClient({ profiles: initial, config }: { profiles: Profile[]; config: Config | null }) {
+  const router = useRouter()
   const [profiles, setProfiles]       = useState(initial)
   const [loading, setLoading]         = useState<string | null>(null)
   const [search, setSearch]           = useState('')
@@ -43,27 +45,34 @@ export default function PagosAdminClient({ profiles: initial, config }: { profil
   const [resetTarget, setResetTarget] = useState<Profile | null>(null)
   const [newPassword, setNewPassword] = useState('')
 
-  const reload = useCallback(async () => {
-    const res = await fetch('/api/admin/payments', { cache: 'no-store' })
-    if (res.ok) {
-      setProfiles(await res.json())
-    } else {
-      toast.error('Error al actualizar la lista')
-    }
-  }, [])
+  // Sincroniza el state cuando el Server Component re-renderiza con datos frescos
+  useEffect(() => {
+    setProfiles(initial)
+  }, [initial])
+
+  const reload = useCallback(() => {
+    router.refresh()
+  }, [router])
 
   async function confirm(id: string) {
     setLoading(id)
+    // Actualización optimista inmediata
+    setProfiles(prev =>
+      prev.map(p => p.id === id ? { ...p, payment_status: 'confirmado', inscription_paid: true } : p)
+    )
     try {
       const res = await fetch(`/api/admin/payments/${id}/confirm`, { method: 'POST' })
       const json = await res.json()
       if (res.ok) {
         toast.success('✅ Pago confirmado')
-        await reload()
+        router.refresh()
       } else {
+        // Revertir optimista si falla
+        setProfiles(initial)
         toast.error(json.error ?? 'Error al confirmar')
       }
     } catch {
+      setProfiles(initial)
       toast.error('Error de conexión')
     }
     setLoading(null)
@@ -95,16 +104,22 @@ export default function PagosAdminClient({ profiles: initial, config }: { profil
 
   async function reject(id: string) {
     setLoading(id + '_reject')
+    // Actualización optimista inmediata
+    setProfiles(prev =>
+      prev.map(p => p.id === id ? { ...p, payment_status: 'rechazado', inscription_paid: false } : p)
+    )
     try {
       const res = await fetch(`/api/admin/payments/${id}/reject`, { method: 'POST' })
       const json = await res.json()
       if (res.ok) {
         toast.success('❌ Pago rechazado')
-        await reload()
+        router.refresh()
       } else {
+        setProfiles(initial)
         toast.error(json.error ?? 'Error al rechazar')
       }
     } catch {
+      setProfiles(initial)
       toast.error('Error de conexión')
     }
     setLoading(null)
