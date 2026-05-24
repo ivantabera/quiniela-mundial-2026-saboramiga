@@ -66,7 +66,7 @@ export default function RegisterPage() {
       { duration: 8000, icon: '📧' }
     )
     setLoading(false)
-    router.push('/')
+    router.push('/dashboard')
   }
 
   return (
