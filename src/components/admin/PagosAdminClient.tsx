@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 interface Profile {
@@ -31,6 +32,7 @@ const STATUS_ORDER: Record<string, number> = {
 type Filter = 'all' | 'pendiente_verificacion' | 'confirmado' | 'sin_iniciar' | 'rechazado'
 
 export default function PagosAdminClient({ profiles: initial }: { profiles: Profile[] }) {
+  const router = useRouter()
   const [profiles, setProfiles] = useState(initial)
   const [loading, setLoading]   = useState<string | null>(null)
   const [search, setSearch]     = useState('')
@@ -38,32 +40,42 @@ export default function PagosAdminClient({ profiles: initial }: { profiles: Prof
 
   async function confirm(id: string) {
     setLoading(id)
-    const res = await fetch(`/api/admin/payments/${id}/confirm`, { method: 'POST' })
-    if (res.ok) {
-      setProfiles(prev => prev.map(p => p.id === id
-        ? { ...p, payment_status: 'confirmado', inscription_paid: true, payment_confirmed_at: new Date().toISOString() }
-        : p
-      ))
-      toast.success('✅ Pago confirmado')
-    } else {
-      const { error } = await res.json()
-      toast.error(error ?? 'Error al confirmar')
+    try {
+      const res = await fetch(`/api/admin/payments/${id}/confirm`, { method: 'POST' })
+      const json = await res.json()
+      if (res.ok) {
+        setProfiles(prev => prev.map(p => p.id === id
+          ? { ...p, payment_status: 'confirmado', inscription_paid: true, payment_confirmed_at: new Date().toISOString() }
+          : p
+        ))
+        toast.success('✅ Pago confirmado')
+        router.refresh()
+      } else {
+        toast.error(json.error ?? 'Error al confirmar')
+      }
+    } catch {
+      toast.error('Error de conexión')
     }
     setLoading(null)
   }
 
   async function reject(id: string) {
     setLoading(id + '_reject')
-    const res = await fetch(`/api/admin/payments/${id}/reject`, { method: 'POST' })
-    if (res.ok) {
-      setProfiles(prev => prev.map(p => p.id === id
-        ? { ...p, payment_status: 'rechazado', inscription_paid: false }
-        : p
-      ))
-      toast.success('Pago rechazado')
-    } else {
-      const { error } = await res.json()
-      toast.error(error ?? 'Error al rechazar')
+    try {
+      const res = await fetch(`/api/admin/payments/${id}/reject`, { method: 'POST' })
+      const json = await res.json()
+      if (res.ok) {
+        setProfiles(prev => prev.map(p => p.id === id
+          ? { ...p, payment_status: 'rechazado', inscription_paid: false }
+          : p
+        ))
+        toast.success('Pago rechazado')
+        router.refresh()
+      } else {
+        toast.error(json.error ?? 'Error al rechazar')
+      }
+    } catch {
+      toast.error('Error de conexión')
     }
     setLoading(null)
   }

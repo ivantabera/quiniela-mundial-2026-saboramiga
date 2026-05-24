@@ -25,16 +25,19 @@ export async function POST(
 
   const { data, error } = await admin
     .from('profiles')
-    .update({
-      payment_status:       'confirmado',
-      payment_confirmed_by: user.id,
-    })
+    .update({ payment_status: 'confirmado' })
     .eq('id', user_id)
     .select('id, payment_status')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+  // best-effort: update confirmed_by (column may not exist in all envs)
+  await admin
+    .from('profiles')
+    .update({ payment_confirmed_by: user.id })
+    .eq('id', user_id)
 
   await admin.from('change_logs').insert({
     user_id:    user.id,
