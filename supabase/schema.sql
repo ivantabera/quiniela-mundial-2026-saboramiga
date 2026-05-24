@@ -176,7 +176,7 @@ CREATE TABLE public.prize_claims (
 -- ============================================================
 CREATE TABLE public.change_logs (
   id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id      UUID REFERENCES public.profiles(id),
+  user_id      UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   action       TEXT NOT NULL,
   table_name   TEXT NOT NULL,
   record_id    UUID,
@@ -369,13 +369,23 @@ DECLARE
 BEGIN
   SELECT inscription_amount INTO v_amount FROM quiniela_config LIMIT 1;
   SELECT COUNT(*) INTO v_count FROM profiles WHERE inscription_paid = true;
-  UPDATE quiniela_config SET pool_amount = v_count * v_amount;
-  RETURN NEW;
+  UPDATE public.quiniela_config
+    SET pool_amount = v_count * v_amount
+    WHERE id = '00000000-0000-0000-0000-000000000001';
+  RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+-- Dispara cuando inscription_paid cambia en un UPDATE
 CREATE TRIGGER profiles_update_pool_amount
-  AFTER UPDATE OF inscription_paid ON public.profiles
+  AFTER UPDATE ON public.profiles
+  FOR EACH ROW
+  WHEN (OLD.inscription_paid IS DISTINCT FROM NEW.inscription_paid)
+  EXECUTE FUNCTION update_pool_amount();
+
+-- Dispara cuando se elimina un participante (para restar de la bolsa)
+CREATE TRIGGER profiles_update_pool_on_delete
+  AFTER DELETE ON public.profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_pool_amount();
 
