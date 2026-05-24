@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 
-export async function POST(
-  req: NextRequest,
-  context: { params: { user_id: string } }
-) {
-  const { user_id } = context.params
+export async function POST(req: NextRequest) {
+  const segments = req.nextUrl.pathname.split('/')
+  const user_id = segments[segments.length - 2]
 
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
