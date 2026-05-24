@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
+import QuinielaInfoStrip from '@/components/shared/QuinielaInfoStrip'
 
 
 export default function RegisterPage() {
@@ -75,6 +76,8 @@ export default function RegisterPage() {
           </Link>
           <p className="text-pitch-400 mt-2">Crea tu cuenta y participa</p>
         </div>
+
+        <QuinielaInfoStrip />
 
         <form onSubmit={handleSubmit} className="card p-8 space-y-5">
           <div className="grid grid-cols-2 gap-4">
