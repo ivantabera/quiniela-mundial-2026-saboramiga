@@ -44,8 +44,12 @@ export default function PagosAdminClient({ profiles: initial, config }: { profil
   const [newPassword, setNewPassword] = useState('')
 
   const reload = useCallback(async () => {
-    const res = await fetch('/api/admin/payments')
-    if (res.ok) setProfiles(await res.json())
+    const res = await fetch('/api/admin/payments', { cache: 'no-store' })
+    if (res.ok) {
+      setProfiles(await res.json())
+    } else {
+      toast.error('Error al actualizar la lista')
+    }
   }, [])
 
   async function confirm(id: string) {

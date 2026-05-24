@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
   }
 
-  // El trigger profiles_sync_inscription_paid se encarga de inscription_paid y pool_amount
+  // inscription_paid se incluye explícitamente para que el trigger
+  // profiles_update_pool_amount (AFTER UPDATE OF inscription_paid) se dispare
   const { data, error } = await admin
     .from('profiles')
-    .update({ payment_status: 'confirmado' })
+    .update({ payment_status: 'confirmado', inscription_paid: true })
     .eq('id', user_id)
     .select('id, payment_status')
     .single()
