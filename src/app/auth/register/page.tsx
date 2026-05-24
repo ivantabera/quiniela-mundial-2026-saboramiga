@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -13,13 +13,16 @@ export default function RegisterPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', username: '', full_name: '' })
+  const submitting = useRef(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (submitting.current) return
     if (form.password.length < 8) {
       toast.error('La contraseña debe tener al menos 8 caracteres')
       return
     }
+    submitting.current = true
     setLoading(true)
 
     // 1. Crear usuario en Supabase Auth
@@ -34,6 +37,7 @@ export default function RegisterPage() {
     if (error) {
       toast.error(error.message)
       setLoading(false)
+      submitting.current = false
       return
     }
 
@@ -52,6 +56,7 @@ export default function RegisterPage() {
         const { error } = await res.json()
         toast.error(error ?? 'Error al crear perfil')
         setLoading(false)
+        submitting.current = false
         return
       }
     }

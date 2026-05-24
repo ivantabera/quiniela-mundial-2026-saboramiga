@@ -20,12 +20,12 @@ export async function POST(request: Request) {
     const admin = createAdminSupabaseClient()
     const avatar_url = AVATARS[Math.floor(Math.random() * AVATARS.length)]
 
-    const { error } = await admin.from('profiles').insert({
+    const { error } = await admin.from('profiles').upsert({
       id,
       username,
       full_name: full_name ?? '',
       avatar_url,
-    })
+    }, { onConflict: 'id', ignoreDuplicates: false })
 
     if (error) {
       if (error.code === '23505') {
