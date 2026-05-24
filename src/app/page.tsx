@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import { getQuinielaState } from '@/lib/utils/quiniela-status'
 import CountdownBanner from '@/components/shared/CountdownBanner'
-import PoolDisplay from '@/components/shared/PoolDisplay'
 import StatusBadge from '@/components/shared/StatusBadge'
 
 export const dynamic = 'force-dynamic'
@@ -13,9 +12,10 @@ export default async function HomePage() {
 
   const admin = createAdminSupabaseClient()
 
-  const [{ data: config }, { count: confirmedCount }] = await Promise.all([
-    supabase.from('quiniela_config').select('*').single(),
+  const [{ data: config }, { count: confirmedCount }, { count: totalCount }] = await Promise.all([
+    admin.from('quiniela_config').select('*').single(),
     admin.from('profiles').select('id', { count: 'exact', head: true }).eq('payment_status', 'confirmado'),
+    admin.from('profiles').select('id', { count: 'exact', head: true }),
   ])
 
   const state = config
@@ -49,41 +49,19 @@ export default async function HomePage() {
           <h1 className="font-display text-7xl md:text-9xl text-white leading-none mb-2 tracking-wide">
             QUINIELA
           </h1>
-          <h2 className="font-display text-4xl md:text-6xl text-brand-400 leading-none mb-8 tracking-widest">
+          <h2 className="font-display text-4xl md:text-6xl text-brand-400 leading-none mb-6 tracking-widest">
             MUNDIAL 2026
           </h2>
 
           {/* Estado de quiniela */}
           {state && (
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-6">
               <StatusBadge status={state.status} label={state.label} />
             </div>
           )}
 
-          {/* Bolsa asegurada */}
-          {config && (
-            <div className="mb-10">
-              <PoolDisplay
-                amount={config.pool_amount}
-                currency={config.currency}
-                label="✅ Bolsa asegurada"
-                sublabel={confirmedCount ? `${confirmedCount} participante${confirmedCount !== 1 ? 's' : ''} confirmado${confirmedCount !== 1 ? 's' : ''}` : undefined}
-              />
-            </div>
-          )}
-
-          {/* Countdown */}
-          {state?.isOpen && (
-            <div className="mb-10">
-              <CountdownBanner
-                closeDate={config!.close_date}
-                status={state.status}
-              />
-            </div>
-          )}
-
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
             {user ? (
               <Link href="/dashboard" className="btn-primary text-lg px-10 py-4">
                 🏆 Ir a mi quiniela
@@ -100,8 +78,59 @@ export default async function HomePage() {
             )}
           </div>
 
+          {/* Bolsas */}
+          {config && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto mb-8">
+              {/* Bolsa asegurada */}
+              <div className="py-4 px-6 pool-gradient rounded-2xl shadow-lg shadow-brand-900/40 text-center">
+                <p className="text-white/70 text-xs uppercase tracking-widest mb-1">✅ Bolsa asegurada</p>
+                <p className="font-display text-white text-3xl leading-none">
+                  {Number(config.pool_amount).toLocaleString('es-MX', {
+                    style: 'currency',
+                    currency: config.currency === 'MXN' ? 'MXN' : 'USD',
+                    minimumFractionDigits: 0,
+                  })}{' '}
+                  <span className="text-white/60 text-xl">{config.currency}</span>
+                </p>
+                {confirmedCount ? (
+                  <p className="text-white/50 text-xs mt-1">
+                    {confirmedCount} participante{confirmedCount !== 1 ? 's' : ''} confirmado{confirmedCount !== 1 ? 's' : ''}
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Bolsa potencial */}
+              {totalCount != null && totalCount > 0 && (
+                <div className="py-4 px-6 bg-amber-950/40 border border-amber-700/40 rounded-2xl text-center">
+                  <p className="text-amber-400/70 text-xs uppercase tracking-widest mb-1">📊 Bolsa potencial</p>
+                  <p className="font-display text-amber-300 text-3xl leading-none">
+                    {(totalCount * config.inscription_amount).toLocaleString('es-MX', {
+                      style: 'currency',
+                      currency: config.currency === 'MXN' ? 'MXN' : 'USD',
+                      minimumFractionDigits: 0,
+                    })}{' '}
+                    <span className="text-amber-400/60 text-xl">{config.currency}</span>
+                  </p>
+                  <p className="text-amber-500/70 text-xs mt-1">
+                    Si los {totalCount} registrado{totalCount !== 1 ? 's' : ''} confirman · estimado
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Countdown */}
+          {state?.isOpen && (
+            <div className="mb-10">
+              <CountdownBanner
+                closeDate={config!.close_date}
+                status={state.status}
+              />
+            </div>
+          )}
+
           {/* Info rápida */}
-          <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
             {[
               { icon: '🌎', label: '48 Selecciones', sub: 'del mundo entero' },
               { icon: '📅', label: '11 Jun – 19 Jul', sub: 'torneo completo' },
