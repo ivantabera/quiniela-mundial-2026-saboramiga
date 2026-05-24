@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   // profiles_update_pool_amount (AFTER UPDATE OF inscription_paid) se dispare
   const { data, error } = await admin
     .from('profiles')
-    .update({ payment_status: 'confirmado', inscription_paid: true })
+    .update({ payment_status: 'confirmado', inscription_paid: true, payment_confirmed_by: user.id })
     .eq('id', user_id)
     .select('id, payment_status')
     .single()
