@@ -3,9 +3,9 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/sup
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ user_id: string }> }
+  context: { params: { user_id: string } }
 ) {
-  const { user_id } = await params
+  const { user_id } = context.params
 
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
