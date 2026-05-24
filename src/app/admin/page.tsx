@@ -35,11 +35,24 @@ export default async function AdminPage() {
     <div className="min-h-screen">
       {/* Header admin */}
       <header className="border-b border-pitch-800 bg-pitch-950/90 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 max-w-6xl h-14 flex items-center justify-between">
-          <span className="font-display text-xl text-brand-400 tracking-widest">⚙️ PANEL ADMIN</span>
-          <Link href="/dashboard" className="text-sm text-pitch-400 hover:text-white">
-            ← Volver al dashboard
-          </Link>
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="h-14 flex items-center justify-between">
+            <span className="font-display text-xl text-brand-400 tracking-widest">⚙️ PANEL ADMIN</span>
+            <Link href="/dashboard" className="text-sm text-pitch-400 hover:text-white">
+              ← Dashboard
+            </Link>
+          </div>
+          <nav className="flex gap-1 overflow-x-auto pb-2">
+            {[
+              { href: '/admin',        label: '📊 Resumen' },
+              { href: '/admin/pagos',  label: '💰 Pagos' },
+            ].map(item => (
+              <Link key={item.href} href={item.href}
+                className="flex-shrink-0 px-4 py-1.5 text-sm text-pitch-400 hover:text-white hover:bg-pitch-800/60 rounded-lg transition-colors whitespace-nowrap">
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </header>
 

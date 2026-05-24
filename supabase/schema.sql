@@ -11,15 +11,20 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- TABLA: profiles (extiende auth.users de Supabase)
 -- ============================================================
 CREATE TABLE public.profiles (
-  id            UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  username      TEXT UNIQUE NOT NULL,
-  full_name     TEXT,
-  avatar_url    TEXT,
-  is_admin      BOOLEAN DEFAULT FALSE,
-  is_active     BOOLEAN DEFAULT TRUE,
-  inscription_paid BOOLEAN DEFAULT FALSE,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username              TEXT UNIQUE NOT NULL,
+  full_name             TEXT,
+  avatar_url            TEXT,
+  is_admin              BOOLEAN DEFAULT FALSE,
+  is_active             BOOLEAN DEFAULT TRUE,
+  inscription_paid      BOOLEAN DEFAULT FALSE,
+  payment_status        TEXT NOT NULL DEFAULT 'sin_iniciar'
+                          CHECK (payment_status IN ('sin_iniciar','pendiente_verificacion','confirmado','rechazado','reembolsado')),
+  payment_submitted_at  TIMESTAMPTZ,
+  payment_confirmed_at  TIMESTAMPTZ,
+  payment_confirmed_by  UUID REFERENCES public.profiles(id),
+  created_at            TIMESTAMPTZ DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
@@ -36,6 +41,11 @@ CREATE TABLE public.quiniela_config (
   tournament_name       TEXT DEFAULT 'Mundial 2026',
   tournament_start_date TIMESTAMPTZ DEFAULT '2026-06-11T15:00:00.000Z',
   tournament_end_date   TIMESTAMPTZ DEFAULT '2026-07-19T00:00:00.000Z',
+  inscription_amount    NUMERIC NOT NULL DEFAULT 100,
+  payment_beneficiary   TEXT NOT NULL DEFAULT 'Guillermo Ivan Tabera Bazan',
+  payment_bank          TEXT NOT NULL DEFAULT 'BBVA México',
+  payment_clabe         TEXT NOT NULL DEFAULT '012180015008419486',
+  payment_whatsapp      TEXT NOT NULL DEFAULT '5579321235',
   updated_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_by            UUID REFERENCES public.profiles(id)
 );
@@ -93,6 +103,7 @@ CREATE TABLE public.picks (
   points_earned   INT DEFAULT 0,
   is_exact        BOOLEAN DEFAULT FALSE,
   is_correct      BOOLEAN DEFAULT FALSE,
+  is_official     BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   updated_at      TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, match_id)
@@ -142,6 +153,22 @@ CREATE TABLE public.prize_distribution (
   is_winner       BOOLEAN DEFAULT FALSE,
   is_tied         BOOLEAN DEFAULT FALSE,
   calculated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- TABLA: prize_claims
+-- ============================================================
+CREATE TABLE public.prize_claims (
+  id                       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id                  UUID NOT NULL REFERENCES public.profiles(id),
+  full_name                TEXT NOT NULL,
+  clabe                    TEXT NOT NULL,
+  authorized_instagram_post BOOLEAN DEFAULT FALSE,
+  claimed_at               TIMESTAMPTZ DEFAULT NOW(),
+  paid_at                  TIMESTAMPTZ,
+  transfer_receipt_url     TEXT,
+  created_at               TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
 );
 
 -- ============================================================
@@ -254,16 +281,31 @@ DECLARE
   top_points   INT;
 BEGIN
   SELECT pool_amount INTO pool FROM quiniela_config LIMIT 1;
-  SELECT MAX(total_points) INTO top_points FROM standings;
-  SELECT COUNT(*) INTO winner_count FROM standings WHERE total_points = top_points;
-  prize_each := ROUND(pool / winner_count, 2);
+
+  SELECT MAX(s.total_points) INTO top_points
+    FROM standings s
+    JOIN profiles p ON s.user_id = p.id
+    WHERE p.inscription_paid = true;
+
+  SELECT COUNT(*) INTO winner_count
+    FROM standings s
+    JOIN profiles p ON s.user_id = p.id
+    WHERE s.total_points = top_points AND p.inscription_paid = true;
+
+  prize_each := ROUND(pool / NULLIF(winner_count, 0), 2);
+
   DELETE FROM prize_distribution;
+
   INSERT INTO prize_distribution (user_id, rank, total_points, prize_amount, is_winner, is_tied)
   SELECT s.user_id, s.rank, s.total_points,
     CASE WHEN s.total_points = top_points THEN prize_each ELSE 0 END,
     s.total_points = top_points,
     winner_count > 1 AND s.total_points = top_points
-  FROM standings s ORDER BY s.rank;
+  FROM standings s
+  JOIN profiles p ON s.user_id = p.id
+  WHERE p.inscription_paid = true
+  ORDER BY s.rank;
+
   RETURN QUERY SELECT pd.user_id, pd.rank, pd.total_points, pd.prize_amount
   FROM prize_distribution pd ORDER BY pd.rank;
 END;
@@ -298,6 +340,67 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER matches_refresh_standings
   AFTER UPDATE ON matches
   FOR EACH ROW EXECUTE FUNCTION trigger_refresh_standings();
+
+CREATE OR REPLACE FUNCTION sync_inscription_paid()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.payment_status = 'confirmado' THEN
+    NEW.inscription_paid := true;
+    NEW.payment_confirmed_at := COALESCE(NEW.payment_confirmed_at, NOW());
+  ELSIF NEW.payment_status IN ('rechazado', 'reembolsado') THEN
+    NEW.inscription_paid := false;
+  END IF;
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER profiles_sync_inscription_paid
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW
+  WHEN (OLD.payment_status IS DISTINCT FROM NEW.payment_status)
+  EXECUTE FUNCTION sync_inscription_paid();
+
+CREATE OR REPLACE FUNCTION update_pool_amount()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_amount numeric;
+  v_count  integer;
+BEGIN
+  SELECT inscription_amount INTO v_amount FROM quiniela_config LIMIT 1;
+  SELECT COUNT(*) INTO v_count FROM profiles WHERE inscription_paid = true;
+  UPDATE quiniela_config SET pool_amount = v_count * v_amount;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER profiles_update_pool_amount
+  AFTER UPDATE OF inscription_paid ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_pool_amount();
+
+CREATE OR REPLACE FUNCTION archive_unpaid_picks()
+RETURNS void AS $$
+DECLARE
+  archived_count int;
+BEGIN
+  UPDATE public.picks
+    SET is_official = false
+    WHERE user_id IN (
+      SELECT id FROM public.profiles WHERE payment_status = 'sin_iniciar'
+    )
+    AND is_official = true;
+
+  GET DIAGNOSTICS archived_count = ROW_COUNT;
+
+  INSERT INTO public.change_logs (action, table_name, new_data)
+    VALUES (
+      'picks_archived',
+      'picks',
+      jsonb_build_object('archived_count', archived_count, 'archived_at', NOW())
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -337,6 +440,22 @@ CREATE POLICY "logs_admin_only"  ON change_logs FOR SELECT USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
 );
 CREATE POLICY "logs_insert_auth" ON change_logs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+ALTER TABLE public.prize_claims ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "prize_claims_select_own" ON public.prize_claims
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "prize_claims_insert_own" ON public.prize_claims
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "prize_claims_admin_all" ON public.prize_claims
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+  );
+
+GRANT SELECT, INSERT, UPDATE ON public.prize_claims TO authenticated;
+GRANT ALL ON public.prize_claims TO service_role;
 
 -- ============================================================
 -- EQUIPOS OFICIALES — Mundial 2026 (48 selecciones, 12 grupos)

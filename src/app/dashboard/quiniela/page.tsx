@@ -1,8 +1,9 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import { getQuinielaState } from '@/lib/utils/quiniela-status'
 import MatchCard from '@/components/quiniela/MatchCard'
 import QuinielaLocked from '@/components/quiniela/QuinielaLocked'
 import QuinielaExportButtons from '@/components/quiniela/QuinielaExportButtons'
+import PaymentStatusBanner from '@/components/shared/PaymentStatusBanner'
 import type { MatchWithTeams } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,8 @@ export const dynamic = 'force-dynamic'
 export default async function QuinielaPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  const admin = createAdminSupabaseClient()
 
   const [configRes, matchesRes, profileRes] = await Promise.all([
     supabase.from('quiniela_config').select('*').single(),
@@ -22,12 +25,13 @@ export default async function QuinielaPage() {
         winner:winner_id(id, name, short_name, flag_emoji, group_name)
       `)
       .order('match_date', { ascending: true }),
-    supabase.from('profiles').select('username, full_name').eq('id', user!.id).single(),
+    admin.from('profiles').select('username, full_name, payment_status').eq('id', user!.id).single(),
   ])
 
-  const config   = configRes.data
-  const state    = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
-  const username = profileRes.data?.username || profileRes.data?.full_name || 'usuario'
+  const config        = configRes.data
+  const state         = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
+  const username      = profileRes.data?.username || profileRes.data?.full_name || 'usuario'
+  const paymentStatus = profileRes.data?.payment_status ?? 'sin_iniciar'
 
   // 👇 AGREGA AQUÍ
   console.log('CONFIG:', config)
@@ -119,6 +123,11 @@ export default async function QuinielaPage() {
           </div>
         </section>
       ))}
+
+      {/* Banner de pago al fondo — visible mientras la quiniela esté abierta */}
+      {state?.isOpen && (
+        <PaymentStatusBanner paymentStatus={paymentStatus} />
+      )}
     </div>
   )
 }

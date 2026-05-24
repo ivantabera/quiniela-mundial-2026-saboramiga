@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import { getQuinielaState } from '@/lib/utils/quiniela-status'
 import CountdownBanner from '@/components/shared/CountdownBanner'
 import PoolDisplay from '@/components/shared/PoolDisplay'
@@ -11,10 +11,12 @@ export default async function HomePage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: config } = await supabase
-    .from('quiniela_config')
-    .select('*')
-    .single()
+  const admin = createAdminSupabaseClient()
+
+  const [{ data: config }, { count: confirmedCount }] = await Promise.all([
+    supabase.from('quiniela_config').select('*').single(),
+    admin.from('profiles').select('id', { count: 'exact', head: true }).eq('payment_status', 'confirmado'),
+  ])
 
   const state = config
     ? getQuinielaState(config.close_date, config.is_manually_open)
@@ -58,10 +60,15 @@ export default async function HomePage() {
             </div>
           )}
 
-          {/* Bolsa acumulada */}
+          {/* Bolsa asegurada */}
           {config && (
             <div className="mb-10">
-              <PoolDisplay amount={config.pool_amount} currency={config.currency} />
+              <PoolDisplay
+                amount={config.pool_amount}
+                currency={config.currency}
+                label="✅ Bolsa asegurada"
+                sublabel={confirmedCount ? `${confirmedCount} participante${confirmedCount !== 1 ? 's' : ''} confirmado${confirmedCount !== 1 ? 's' : ''}` : undefined}
+              />
             </div>
           )}
 
@@ -111,8 +118,20 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-pitch-800 py-6 text-center text-pitch-500 text-sm">
-        © 2026 Sabor a Miga · Quiniela Mundial 2026
+      <footer className="border-t border-pitch-800 py-8 text-center text-pitch-500 text-sm space-y-2">
+        <p>© 2026 Sabor a Miga · Quiniela Mundial 2026</p>
+        <p className="text-pitch-600">
+          Hecho por{' '}
+          <span className="text-pitch-400 font-medium">Ivan Tabera</span>
+          {' · '}
+          <a href="mailto:ivantabera19@gmail.com" className="hover:text-pitch-300 transition-colors">
+            ivantabera19@gmail.com
+          </a>
+          {' · '}
+          <a href="https://wa.me/525579321235" target="_blank" rel="noopener noreferrer" className="hover:text-pitch-300 transition-colors">
+            WhatsApp 55 7932 1235
+          </a>
+        </p>
       </footer>
     </main>
   )

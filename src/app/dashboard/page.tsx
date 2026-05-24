@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import { getQuinielaState } from '@/lib/utils/quiniela-status'
 import CountdownBanner from '@/components/shared/CountdownBanner'
 import StatusBadge from '@/components/shared/StatusBadge'
 import PoolDisplay from '@/components/shared/PoolDisplay'
+import PaymentStatusBanner from '@/components/shared/PaymentStatusBanner'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,22 +12,29 @@ export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [configRes, standingRes, picksCountRes, matchCountRes] = await Promise.all([
+  const admin = createAdminSupabaseClient()
+
+  const [configRes, standingRes, picksCountRes, matchCountRes, profileRes] = await Promise.all([
     supabase.from('quiniela_config').select('*').single(),
     supabase.from('standings').select('*').eq('user_id', user!.id).single(),
     supabase.from('picks').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
     supabase.from('matches').select('id', { count: 'exact', head: true }),
+    admin.from('profiles').select('payment_status').eq('id', user!.id).single(),
   ])
 
-  const config   = configRes.data
-  const standing = standingRes.data
-  const picks    = picksCountRes.count ?? 0
-  const total    = matchCountRes.count ?? 0
-  const pct      = total > 0 ? Math.round((picks / total) * 100) : 0
-  const state    = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
+  const config        = configRes.data
+  const standing      = standingRes.data
+  const picks         = picksCountRes.count ?? 0
+  const total         = matchCountRes.count ?? 0
+  const pct           = total > 0 ? Math.round((picks / total) * 100) : 0
+  const state         = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
+  const paymentStatus = profileRes.data?.payment_status ?? 'sin_iniciar'
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* Banner de estado de pago */}
+      <PaymentStatusBanner paymentStatus={paymentStatus} />
+
       {/* Estado quiniela + countdown */}
       {state && config && (
         <div className="card p-6">

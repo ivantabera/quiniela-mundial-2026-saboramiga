@@ -4,6 +4,8 @@ interface Props {
   large?: boolean
   showReparto?: boolean
   tiebreakEnabled?: boolean
+  label?: string
+  sublabel?: string
 }
 
 export default function PoolDisplay({
@@ -12,6 +14,8 @@ export default function PoolDisplay({
   large = false,
   showReparto = false,
   tiebreakEnabled = true,
+  label = '💰 Bolsa acumulada',
+  sublabel,
 }: Props) {
   const fmt = (n: number) =>
     n.toLocaleString('es-MX', {
@@ -26,10 +30,13 @@ export default function PoolDisplay({
     <div className="inline-block w-full max-w-lg">
       {/* Bolsa acumulada */}
       <div className={`${large ? 'py-6 px-10' : 'py-4 px-6'} pool-gradient rounded-2xl shadow-lg shadow-brand-900/40 text-center`}>
-        <p className="text-white/70 text-xs uppercase tracking-widest mb-1">💰 Bolsa acumulada</p>
+        <p className="text-white/70 text-xs uppercase tracking-widest mb-1">{label}</p>
         <p className={`font-display text-white leading-none ${large ? 'text-6xl' : 'text-4xl'}`}>
           {fmt(amount)} <span className="text-white/60 text-2xl">{currency}</span>
         </p>
+        {sublabel && (
+          <p className="text-white/50 text-xs mt-1">{sublabel}</p>
+        )}
       </div>
 
       {/* Reparto por escenario de ganadores */}
