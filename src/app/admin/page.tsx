@@ -27,7 +27,7 @@ export default async function AdminPage() {
 
   const [configRes, statsRes, logsRes] = await Promise.all([
     supabase.from('quiniela_config').select('*').single(),
-    supabase.from('standings').select('user_id', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('change_logs').select('*').order('created_at', { ascending: false }).limit(20),
   ])
 
