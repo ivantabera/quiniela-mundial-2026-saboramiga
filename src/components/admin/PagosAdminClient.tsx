@@ -30,7 +30,12 @@ const STATUS_ORDER: Record<string, number> = {
 
 type Filter = 'all' | 'pendiente_verificacion' | 'confirmado' | 'sin_iniciar' | 'rechazado'
 
-export default function PagosAdminClient({ profiles: initial }: { profiles: Profile[] }) {
+interface Config {
+  inscription_amount: number
+  currency: string
+}
+
+export default function PagosAdminClient({ profiles: initial, config }: { profiles: Profile[]; config: Config | null }) {
   const [profiles, setProfiles]       = useState(initial)
   const [loading, setLoading]         = useState<string | null>(null)
   const [search, setSearch]           = useState('')
@@ -118,7 +123,50 @@ export default function PagosAdminClient({ profiles: initial }: { profiles: Prof
     { key: 'rechazado',             label: '❌ Rechazados' },
   ]
 
+  const counts = {
+    confirmado:  profiles.filter(p => p.payment_status === 'confirmado').length,
+    pendiente:   profiles.filter(p => p.payment_status === 'pendiente_verificacion').length,
+    sin_iniciar: profiles.filter(p => p.payment_status === 'sin_iniciar').length,
+    rechazado:   profiles.filter(p => p.payment_status === 'rechazado').length,
+  }
+  const poolAmount = config ? counts.confirmado * config.inscription_amount : 0
+
   return (
+    <div className="space-y-6">
+
+      {/* Resumen */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="card p-5 text-center">
+          <div className="font-display text-4xl text-green-400">{counts.confirmado}</div>
+          <div className="text-pitch-400 text-sm mt-1">✅ Confirmados</div>
+        </div>
+        <div className="card p-5 text-center border-amber-700/30">
+          <div className="font-display text-4xl text-amber-400">{counts.pendiente}</div>
+          <div className="text-pitch-400 text-sm mt-1">⏳ Por verificar</div>
+        </div>
+        <div className="card p-5 text-center">
+          <div className="font-display text-4xl text-pitch-400">{counts.sin_iniciar}</div>
+          <div className="text-pitch-400 text-sm mt-1">— Sin iniciar</div>
+        </div>
+        <div className="card p-5 text-center">
+          <div className="font-display text-4xl text-red-400">{counts.rechazado}</div>
+          <div className="text-pitch-400 text-sm mt-1">❌ Rechazados</div>
+        </div>
+      </div>
+
+      {/* Bolsa acumulada */}
+      {config && (
+        <div className="card p-4 flex items-center justify-between">
+          <div>
+            <span className="text-pitch-300 font-semibold">Bolsa acumulada</span>
+            <span className="text-pitch-500 text-xs ml-2">({counts.confirmado} × ${config.inscription_amount})</span>
+          </div>
+          <span className="font-display text-2xl text-brand-400">
+            ${poolAmount.toLocaleString('es-MX')} {config.currency}
+          </span>
+        </div>
+      )}
+
     <div className="card overflow-hidden">
 
       {/* Modal reset contraseña */}
@@ -287,6 +335,7 @@ export default function PagosAdminClient({ profiles: initial }: { profiles: Prof
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   )
 }
