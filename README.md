@@ -16,6 +16,7 @@ Plataforma web completa para gestionar una quiniela del Mundial FIFA 2026. Permi
 - [Sistema de puntuación y premios](#sistema-de-puntuación-y-premios)
 - [API Routes](#api-routes)
 - [Panel de administración](#panel-de-administración)
+- [Tests](#tests)
 - [Setup local](#setup-local)
 - [Deploy a producción (Vercel)](#deploy-a-producción-vercel)
 - [Comandos útiles](#comandos-útiles)
@@ -49,6 +50,7 @@ El proyecto usa el **App Router** de Next.js 14 con arquitectura server-first: l
 
 | Módulo | Descripción |
 |---|---|
+| **Landing page** | Visible sin sesión. Muestra estado de la quiniela, bolsa asegurada (confirmados reales), bolsa potencial estimada (todos los registrados × inscripción) y countdown al cierre. |
 | **Registro / Login** | Registro con username, nombre completo, email y contraseña. Redirección automática al dashboard si ya está autenticado. |
 | **Dashboard** | Vista general: estado de la quiniela, countdown en tiempo real, puntos actuales, posición en ranking, progreso de picks y bolsa acumulada. |
 | **Mi Quiniela** | Predicciones para los 104 partidos del Mundial (fase de grupos + eliminatorias). Agrupados por etapa. Marcador exacto en grupos, resultado y ganador en eliminatorias. Editable mientras esté abierta. |
@@ -144,7 +146,8 @@ src/
 │   │   ├── CountdownBanner.tsx          # Reloj regresivo en tiempo real (client)
 │   │   ├── StatusBadge.tsx              # Badge: Abierta / Cerrando / Cerrada
 │   │   ├── PaymentStatusBanner.tsx      # Banner de estado de pago del usuario
-│   │   └── PoolDisplay.tsx              # Monto de la bolsa acumulada
+│   │   ├── PoolDisplay.tsx              # Monto de la bolsa acumulada
+│   │   └── QuinielaInfoStrip.tsx        # Bolsa + countdown en login/registro (client)
 │   ├── quiniela/
 │   │   ├── MatchCard.tsx                # Tarjeta de partido con inputs editables
 │   │   ├── QuinielaLocked.tsx           # Pantalla cuando la quiniela está cerrada
@@ -188,7 +191,7 @@ supabase/
 
 | Tabla | Descripción |
 |---|---|
-| `profiles` | Extiende `auth.users`. Almacena username, nombre, avatar, rol admin, estado de pago (`sin_iniciar` / `pendiente_verificacion` / `confirmado` / `rechazado` / `reembolsado`) e `inscription_paid`. |
+| `profiles` | Extiende `auth.users`. Almacena username, nombre, avatar, rol admin, estado de pago (`sin_iniciar` / `pendiente_verificacion` / `confirmado` / `rechazado` / `reembolsado`), `inscription_paid` y `payment_confirmed_by` (id del admin que confirmó el pago). |
 | `quiniela_config` | Singleton (una sola fila). Fecha de cierre, apertura manual, monto de inscripción, datos bancarios, configuración del torneo. |
 | `teams` | 48 selecciones clasificadas, organizadas en 12 grupos (A–L) con emoji de bandera. |
 | `matches` | 104 partidos: fase de grupos + fase eliminatoria. Almacena marcador real, resultado y ganador cuando se carga. |
@@ -218,6 +221,7 @@ supabase/
 | `matches_refresh_standings` | AFTER UPDATE en `matches` | Si `is_finished` cambia de `FALSE` a `TRUE`, llama a `refresh_standings()`. |
 | `profiles_sync_inscription_paid` | BEFORE UPDATE en `profiles` (cuando cambia `payment_status`) | Si el estado es `confirmado`, activa `inscription_paid = true` y registra la fecha. Si es `rechazado` o `reembolsado`, lo pone en `false`. |
 | `profiles_update_pool_amount` | AFTER UPDATE OF `inscription_paid` en `profiles` | Recalcula `pool_amount` en `quiniela_config` (participantes confirmados × monto de inscripción). |
+| `profiles_update_pool_on_delete` | AFTER DELETE en `profiles` | Recalcula `pool_amount` al borrar un participante, para que la bolsa se ajuste automáticamente. |
 
 ### Row Level Security (RLS)
 
@@ -340,6 +344,25 @@ Todas las rutas de admin validan que el usuario sea admin usando `createAdminSup
 
 ---
 
+## Tests
+
+El proyecto usa **Vitest** con `@testing-library/react` y `jsdom`.
+
+```bash
+npm test            # Corre todos los tests una vez
+npm run test:watch  # Modo interactivo (re-ejecuta al guardar)
+```
+
+Los tests están en `src/test/` y cubren:
+
+| Archivo | Qué cubre |
+|---|---|
+| `quiniela-status.test.ts` | `getQuinielaState` (todos los estados, apertura manual, campos retornados) y `formatCountdown` (ceros, negativos, valores compuestos) |
+| `StatusBadge.test.tsx` | Labels por status, animación del dot, prop `large` |
+| `PoolDisplay.test.tsx` | Formateo de monto, label personalizado, sublabel, reparto por ganadores, tiebreak |
+
+---
+
 ## Panel de administración
 
 El acceso a `/admin` y `/admin/pagos` está protegido: la página verifica `is_admin = true` en el perfil del usuario antes de renderizar. Si no es admin, redirige a `/dashboard`.
@@ -432,6 +455,8 @@ npm run dev          # Servidor de desarrollo
 npm run build        # Build de producción
 npm run start        # Servidor de producción local
 npm run lint         # Verificar errores de linting
+npm test             # Correr suite de tests unitarios
+npm run test:watch   # Tests en modo interactivo (re-ejecuta al guardar)
 npm run db:types     # Regenerar tipos TypeScript desde Supabase
 ```
 
