@@ -105,7 +105,7 @@ export default async function HomePage() {
             {[
               { icon: '🌎', label: '48 Selecciones', sub: 'del mundo entero' },
               { icon: '📅', label: '11 Jun – 19 Jul', sub: 'torneo completo' },
-              { icon: '🏅', label: 'Bolsa total', sub: 'entre los ganadores' },
+              { icon: '🏅', label: config ? `$${Number(config.pool_amount).toLocaleString('es-MX')} ${config.currency}` : 'Bolsa total', sub: 'entre los ganadores' },
             ].map(item => (
               <div key={item.label} className="card px-4 py-5 text-center">
                 <div className="text-3xl mb-2">{item.icon}</div>
