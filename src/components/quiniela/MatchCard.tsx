@@ -59,8 +59,7 @@ export default function MatchCard({ match, isEditable, userId }: Props) {
   )
   const [saved, setSaved] = useState(!!match.user_pick)
   const [isDirty, setIsDirty] = useState(false)
-
-  const hasExistingPick = !!match.user_pick
+  const [hasExistingPick, setHasExistingPick] = useState(!!match.user_pick)
 
   function handleSelect(value: ResultOption) {
     if (!isEditable || match.is_finished) return
@@ -95,6 +94,7 @@ export default function MatchCard({ match, isEditable, userId }: Props) {
       } else {
         setSaved(true)
         setIsDirty(false)
+        setHasExistingPick(true)
         toast.success('✅ Pick guardado')
       }
     })
