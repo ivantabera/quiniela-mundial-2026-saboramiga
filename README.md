@@ -360,6 +360,7 @@ Los tests están en `src/test/` y cubren:
 | `quiniela-status.test.ts` | `getQuinielaState` (todos los estados, apertura manual, campos retornados) y `formatCountdown` (ceros, negativos, valores compuestos) |
 | `StatusBadge.test.tsx` | Labels por status, animación del dot, prop `large` |
 | `PoolDisplay.test.tsx` | Formateo de monto, label personalizado, sublabel, reparto por ganadores, tiebreak |
+| `MatchCard.test.tsx` | Render de equipos y botones, INSERT en primer guardado, UPDATE en guardados posteriores (regresión: clave duplicada), UPDATE con pick previo del servidor, toasts de éxito / error genérico / error RLS |
 
 ---
 
