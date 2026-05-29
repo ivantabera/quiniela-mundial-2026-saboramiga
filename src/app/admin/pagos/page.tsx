@@ -1,11 +1,19 @@
 import Link from 'next/link'
-import { createAdminSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import PagosAdminClient from '@/components/admin/PagosAdminClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PagosAdminPage() {
+  // Guard de admin
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) redirect('/auth/login')
+
   const admin = createAdminSupabaseClient()
+  const { data: adminProfile } = await admin.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!adminProfile?.is_admin) redirect('/dashboard')
 
   const [profilesRes, configRes] = await Promise.all([
     admin
@@ -17,6 +25,10 @@ export default async function PagosAdminPage() {
       .select('pool_amount, currency, inscription_amount')
       .single(),
   ])
+
+  if (profilesRes.error) {
+    console.error('[PagosAdmin] Error fetching profiles:', profilesRes.error.message)
+  }
 
   const profiles = profilesRes.data ?? []
   const config   = configRes.data
