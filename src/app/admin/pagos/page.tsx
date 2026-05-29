@@ -30,6 +30,9 @@ export default async function PagosAdminPage() {
     console.error('[PagosAdmin] Error fetching profiles:', profilesRes.error.message)
   }
 
+  console.log('[PagosAdmin] profiles count:', profilesRes.data?.length)
+  console.log('[PagosAdmin] payment_status values:', profilesRes.data?.map(p => `${p.username}:${JSON.stringify(p.payment_status)}`))
+
   const profiles = profilesRes.data ?? []
   const config   = configRes.data
 
