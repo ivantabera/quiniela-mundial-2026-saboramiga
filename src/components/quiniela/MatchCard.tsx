@@ -108,6 +108,12 @@ export default function MatchCard({ match, isEditable, userId }: Props) {
       })
     : 'Por confirmar'
 
+  // Minutos restantes para el cierre del pick (20 min antes del partido)
+  const minutesUntilLock = match.match_date && !match.is_finished
+    ? Math.floor((new Date(match.match_date).getTime() - 20 * 60 * 1000 - Date.now()) / 60000)
+    : null
+  const closingSoon = minutesUntilLock !== null && minutesUntilLock > 0 && minutesUntilLock <= 60
+
   const homeTeam = match.home_team
   const awayTeam = match.away_team
 
@@ -131,7 +137,17 @@ export default function MatchCard({ match, isEditable, userId }: Props) {
         <span className="text-[10px] uppercase tracking-widest text-pitch-500">
           {match.group_name ? `Grupo ${match.group_name}` : match.stage}
         </span>
-        <span className="text-[10px] text-pitch-500">{matchDate}</span>
+        <div className="flex items-center gap-2">
+          {closingSoon && (
+            <span className="text-[10px] text-yellow-400 font-semibold animate-pulse">
+              ⏳ cierra en {minutesUntilLock}min
+            </span>
+          )}
+          {!isEditable && !match.is_finished && (
+            <span className="text-[10px] text-red-400">🔒 cerrado</span>
+          )}
+          <span className="text-[10px] text-pitch-500">{matchDate}</span>
+        </div>
       </div>
 
       {/* Equipos */}

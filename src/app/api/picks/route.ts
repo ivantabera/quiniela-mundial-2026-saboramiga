@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
+import { isMatchOpen } from '@/lib/utils/quiniela-status'
 import { z } from 'zod'
 
 const PickSchema = z.object({
@@ -29,34 +30,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-  // Validación doble en backend — independiente del middleware
   const adminSupabase = createAdminSupabaseClient()
-  const { data: config } = await adminSupabase
-    .from('quiniela_config')
-    .select('close_date, is_manually_open')
-    .single()
-
-  if (config) {
-    const now       = new Date()
-    const closeDate = new Date(config.close_date)
-    const isOpen    = config.is_manually_open || now < closeDate
-
-    if (!isOpen) {
-      // Registrar intento de modificación ilegal
-      await adminSupabase.from('change_logs').insert({
-        user_id:    user.id,
-        action:     'pick_blocked_closed',
-        table_name: 'picks',
-        old_data:   null,
-        new_data:   await req.json().catch(() => null),
-        ip_address: req.headers.get('x-forwarded-for') ?? 'unknown',
-      })
-      return NextResponse.json(
-        { error: 'La quiniela está cerrada', code: 'QUINIELA_CLOSED' },
-        { status: 423 }
-      )
-    }
-  }
 
   let body: unknown
   try { body = await req.json() } catch {
@@ -70,15 +44,29 @@ export async function POST(req: NextRequest) {
 
   const { match_id, predicted_home, predicted_away } = parsed.data
 
-  // Verificar que el partido existe y no ha terminado
-  const { data: match } = await supabase
-    .from('matches')
-    .select('id, is_finished')
-    .eq('id', match_id)
-    .single()
+  // Verificar partido y validar deadline por partido (20 min antes del kickoff)
+  const [matchRes, configRes] = await Promise.all([
+    supabase.from('matches').select('id, is_finished, match_date').eq('id', match_id).single(),
+    adminSupabase.from('quiniela_config').select('close_date, is_manually_open').single(),
+  ])
 
+  const match = matchRes.data
   if (!match) return NextResponse.json({ error: 'Partido no encontrado' }, { status: 404 })
   if (match.is_finished) return NextResponse.json({ error: 'El partido ya terminó' }, { status: 409 })
+
+  if (!isMatchOpen(match.match_date, configRes.data)) {
+    await adminSupabase.from('change_logs').insert({
+      user_id:    user.id,
+      action:     'pick_blocked_closed',
+      table_name: 'picks',
+      record_id:  match_id,
+      ip_address: req.headers.get('x-forwarded-for') ?? 'unknown',
+    })
+    return NextResponse.json(
+      { error: 'Este partido ya está cerrado para picks', code: 'MATCH_LOCKED' },
+      { status: 423 }
+    )
+  }
 
   // Upsert pick
   const { data, error } = await supabase

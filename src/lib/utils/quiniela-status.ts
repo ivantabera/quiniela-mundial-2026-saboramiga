@@ -89,6 +89,23 @@ export function getQuinielaState(closeDateISO: string, isManuallyOpen = false): 
   }
 }
 
+const MATCH_LOCK_MINUTES = 20
+
+export function isMatchOpen(
+  matchDate: string | null,
+  config: { close_date: string; is_manually_open: boolean } | null,
+): boolean {
+  if (!matchDate) return false
+
+  // Hard global deadline (respetamos close_date a menos que esté manualmente abierta)
+  if (config && !config.is_manually_open) {
+    if (new Date() >= new Date(config.close_date)) return false
+  }
+
+  const lockTime = new Date(new Date(matchDate).getTime() - MATCH_LOCK_MINUTES * 60 * 1000)
+  return new Date() < lockTime
+}
+
 export function formatCountdown(secondsRemaining: number): {
   days: number
   hours: number

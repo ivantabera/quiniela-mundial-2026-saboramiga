@@ -45,7 +45,7 @@ export async function GET(_req: NextRequest) {
   const data = (profilesRes.data ?? []).map(p => {
     const userPicks    = pickMap.get(p.id)
     const pickedIds    = userPicks?.matchIds ?? new Set<string>()
-    const missingIds   = [...allMatchIds].filter(id => !pickedIds.has(id))
+    const missingIds   = Array.from(allMatchIds).filter(id => !pickedIds.has(id))
     const missingMatches = missingIds
       .map(id => allMatches.find(m => m.id === id))
       .filter(Boolean)

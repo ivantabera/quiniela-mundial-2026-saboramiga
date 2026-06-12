@@ -1,5 +1,5 @@
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
-import { getQuinielaState } from '@/lib/utils/quiniela-status'
+import { getQuinielaState, isMatchOpen } from '@/lib/utils/quiniela-status'
 import MatchCard from '@/components/quiniela/MatchCard'
 import QuinielaLocked from '@/components/quiniela/QuinielaLocked'
 import QuinielaExportButtons from '@/components/quiniela/QuinielaExportButtons'
@@ -30,6 +30,8 @@ export default async function QuinielaPage() {
 
   const config        = configRes.data
   const state         = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
+  const openMatches   = (matchesRes.data ?? []).filter(m => !m.is_finished && isMatchOpen(m.match_date, config))
+  const anyMatchOpen  = openMatches.length > 0
   const username      = profileRes.data?.username || profileRes.data?.full_name || 'usuario'
   const paymentStatus = profileRes.data?.payment_status ?? 'sin_iniciar'
 
@@ -71,16 +73,16 @@ export default async function QuinielaPage() {
         <div>
           <h1 className="font-display text-4xl text-white tracking-wide">Mi Quiniela</h1>
           <p className="text-pitch-400">
-            {state?.isOpen ? 'Llena tus predicciones antes del cierre' : 'Quiniela cerrada — solo lectura'}
+            {anyMatchOpen ? `${openMatches.length} partido${openMatches.length !== 1 ? 's' : ''} aún abierto${openMatches.length !== 1 ? 's' : ''}` : 'Quiniela cerrada — solo lectura'}
           </p>
         </div>
-        {state && (
+        {config && (
           <div className={`px-4 py-2 rounded-xl text-sm font-semibold border ${
-            state.isOpen
+            anyMatchOpen
               ? 'bg-pitch-800 text-pitch-200 border-pitch-600'
               : 'bg-red-950/50 text-red-300 border-red-700'
           }`}>
-            {state.isOpen ? `⏳ ${state.hoursRemaining}h restantes` : '🔒 Cerrada'}
+            {anyMatchOpen ? `⏳ ${openMatches.length} abierto${openMatches.length !== 1 ? 's' : ''}` : '🔒 Cerrada'}
           </div>
         )}
       </div>
@@ -104,7 +106,7 @@ export default async function QuinielaPage() {
         )
       })()}
 
-      {!state?.isOpen && <QuinielaLocked />}
+      {!anyMatchOpen && <QuinielaLocked />}
 
       {Object.entries(groups).map(([groupName, matches]) => (
         <section key={groupName}>
@@ -116,7 +118,7 @@ export default async function QuinielaPage() {
               <MatchCard
                 key={match.id}
                 match={match}
-                isEditable={state?.canEdit ?? false}
+                isEditable={!match.is_finished && isMatchOpen(match.match_date, config)}
                 userId={user!.id}
               />
             ))}
@@ -125,7 +127,7 @@ export default async function QuinielaPage() {
       ))}
 
       {/* Banner de pago al fondo — visible mientras la quiniela esté abierta */}
-      {state?.isOpen && (
+      {anyMatchOpen && (
         <PaymentStatusBanner paymentStatus={paymentStatus} />
       )}
     </div>

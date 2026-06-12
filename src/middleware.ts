@@ -3,8 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 
 // Rutas que requieren autenticación
 const PROTECTED_ROUTES = ['/dashboard', '/admin']
-// Rutas de API que modifican picks (bloqueadas cuando quiniela está cerrada)
-const PICK_MUTATION_ROUTES = ['/api/picks']
+const PICK_MUTATION_ROUTES: string[] = [] // validación por partido manejada en /api/picks
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

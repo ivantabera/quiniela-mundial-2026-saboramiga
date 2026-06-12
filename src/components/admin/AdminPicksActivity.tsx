@@ -135,13 +135,13 @@ export default function AdminPicksActivity() {
               {/* Detalle de faltantes */}
               {isOpen && missing > 0 && (
                 <div className="border-t border-pitch-700/30 px-4 py-3 space-y-3">
-                  {[...byGroup.entries()].map(([group, matches]) => (
+                  {Array.from(byGroup.entries()).map(([group, matches]) => (
                     <div key={group}>
                       <p className="text-pitch-500 text-xs uppercase tracking-wider mb-1.5">
                         {group} — {matches.length} partido{matches.length !== 1 ? 's' : ''}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
-                        {matches.map(m => (
+                        {matches.map((m: MissingMatch) => (
                           <span key={m.id} className="inline-flex items-center gap-1 bg-pitch-800/80 text-pitch-300 text-xs px-2 py-1 rounded-lg">
                             <span className="text-pitch-600">#{m.match_number}</span>
                             {m.home_team?.flag_emoji} {m.home_team?.short_name}
