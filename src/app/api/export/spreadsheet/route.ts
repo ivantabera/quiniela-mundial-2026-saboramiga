@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
   const [configRes, profilesRes, matchesRes, picksRes] = await Promise.all([
     admin.from('quiniela_config').select('close_date, is_manually_open, pool_amount, currency').single(),
-    admin.from('profiles').select('id, username, full_name').eq('is_active', true).order('username'),
+    admin.from('profiles').select('id, username, full_name').eq('is_active', true).eq('inscription_paid', true).order('username'),
     admin.from('matches').select(`
       id, match_number, stage, group_name, match_date,
       home_team:home_team_id(name, short_name, flag_emoji),

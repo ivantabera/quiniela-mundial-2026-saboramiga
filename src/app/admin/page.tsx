@@ -4,6 +4,8 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/sup
 import AdminConfigForm from '@/components/admin/AdminConfigForm'
 import AdminMatchResults from '@/components/admin/AdminMatchResults'
 import AdminParticipants from '@/components/admin/AdminParticipants'
+import AdminRecalculate from '@/components/admin/AdminRecalculate'
+import AdminPicksActivity from '@/components/admin/AdminPicksActivity'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,6 +96,20 @@ export default async function AdminPage() {
         <div className="card p-6">
           <h2 className="font-display text-2xl text-white mb-6 tracking-wide">⚽ Cargar Resultados</h2>
           <AdminMatchResults />
+        </div>
+
+        {/* Actividad de quinielas */}
+        <div className="card p-6">
+          <h2 className="font-display text-2xl text-white mb-2 tracking-wide">📋 Actividad de Quinielas</h2>
+          <p className="text-pitch-400 text-sm mb-4">Participantes pagados · picks guardados y última modificación</p>
+          <AdminPicksActivity />
+        </div>
+
+        {/* Recalcular rankings */}
+        <div className="card p-6">
+          <h2 className="font-display text-2xl text-white mb-2 tracking-wide">📊 Rankings</h2>
+          <p className="text-pitch-400 text-sm mb-4">Si los rankings no se actualizan automáticamente, forzar recálculo aquí.</p>
+          <AdminRecalculate />
         </div>
 
         {/* Logs recientes */}

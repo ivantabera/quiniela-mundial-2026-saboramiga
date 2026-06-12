@@ -1,14 +1,15 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import type { StandingWithProfile } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
 export default async function RankingsPage() {
-  const supabase = await createServerSupabaseClient()
+  const supabase      = await createServerSupabaseClient()
+  const adminSupabase = createAdminSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const [standingsRes, configRes, totalMatchesRes] = await Promise.all([
-    supabase
+    adminSupabase
       .from('standings')
       .select('*, profile:profiles(*)')
       .order('rank', { ascending: true })
@@ -29,13 +30,14 @@ export default async function RankingsPage() {
   // --- Vista pre-torneo: participantes con conteo de picks ---
   let preRows: { id: string; username: string; full_name: string | null; picks: number }[] = []
   if (!hasStarted) {
-    const { data: profiles } = await supabase
+    const { data: profiles } = await adminSupabase
       .from('profiles')
       .select('id, username, full_name')
       .eq('is_active', true)
+      .eq('inscription_paid', true)
       .order('created_at', { ascending: true })
 
-    const { data: pickCounts } = await supabase
+    const { data: pickCounts } = await adminSupabase
       .from('picks')
       .select('user_id')
 
@@ -51,7 +53,8 @@ export default async function RankingsPage() {
   }
 
   // --- Vista durante torneo ---
-  const rows = (standingsRes.data ?? []) as unknown as StandingWithProfile[]
+  const rows = ((standingsRes.data ?? []) as unknown as StandingWithProfile[])
+    .filter(r => r.profile?.inscription_paid)
   const topPoints = rows[0]?.total_points ?? 0
   const winners   = rows.filter(r => r.total_points === topPoints && topPoints > 0)
   const prizeEach = winners.length > 0 && config ? config.pool_amount / winners.length : 0
