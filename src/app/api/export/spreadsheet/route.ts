@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   const admin = createAdminSupabaseClient()
 
-  const [configRes, profilesRes, matchesRes, picksRes] = await Promise.all([
+  const [configRes, profilesRes, matchesRes] = await Promise.all([
     admin.from('quiniela_config').select('close_date, is_manually_open, pool_amount, currency').single(),
     admin.from('profiles').select('id, username, full_name').eq('is_active', true).eq('inscription_paid', true).order('username'),
     admin.from('matches').select(`
@@ -18,13 +18,26 @@ export async function GET(request: Request) {
       home_team:home_team_id(name, short_name, flag_emoji),
       away_team:away_team_id(name, short_name, flag_emoji)
     `).order('match_date', { ascending: true }),
-    admin.from('picks').select('user_id, match_id, predicted_result, updated_at'),
   ])
+
+  // Paginar picks de a 1000 (límite del servidor Supabase)
+  const picks: { user_id: string; match_id: string; predicted_result: string | null; updated_at: string }[] = []
+  const PAGE = 1000
+  let from = 0
+  while (true) {
+    const { data, error } = await admin
+      .from('picks')
+      .select('user_id, match_id, predicted_result, updated_at')
+      .range(from, from + PAGE - 1)
+    if (error || !data || data.length === 0) break
+    picks.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
 
   const config   = configRes.data
   const profiles = profilesRes.data ?? []
   const matches  = matchesRes.data ?? []
-  const picks    = picksRes.data ?? []
 
   const now      = new Date()
   const closeDate = config ? new Date(config.close_date) : null

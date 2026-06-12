@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest) {
   const { data: profile } = await admin.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!profile?.is_admin) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const [profilesRes, picksRes, matchesRes] = await Promise.all([
+  const [profilesRes, matchesRes] = await Promise.all([
     admin
       .from('profiles')
       .select('id, username, full_name')
@@ -18,13 +18,25 @@ export async function GET(_req: NextRequest) {
       .eq('is_active', true)
       .order('username'),
     admin
-      .from('picks')
-      .select('user_id, match_id, updated_at'),
-    admin
       .from('matches')
       .select('id, match_number, group_name, home_team:home_team_id(short_name, flag_emoji), away_team:away_team_id(short_name, flag_emoji)')
       .order('match_number', { ascending: true }),
   ])
+
+  // Paginar picks de a 1000 (límite del servidor Supabase)
+  const allPicks: { user_id: string; match_id: string; updated_at: string }[] = []
+  const PAGE = 1000
+  let from = 0
+  while (true) {
+    const { data, error } = await admin
+      .from('picks')
+      .select('user_id, match_id, updated_at')
+      .range(from, from + PAGE - 1)
+    if (error || !data || data.length === 0) break
+    allPicks.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
 
   const allMatches  = matchesRes.data ?? []
   const totalMatches = allMatches.length
@@ -32,7 +44,7 @@ export async function GET(_req: NextRequest) {
 
   // Por usuario: set de match_ids con pick y fecha más reciente
   const pickMap = new Map<string, { matchIds: Set<string>; lastModified: string }>()
-  for (const pick of picksRes.data ?? []) {
+  for (const pick of allPicks) {
     const existing = pickMap.get(pick.user_id)
     if (!existing) {
       pickMap.set(pick.user_id, { matchIds: new Set([pick.match_id]), lastModified: pick.updated_at })
