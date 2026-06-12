@@ -89,7 +89,7 @@ export function getQuinielaState(closeDateISO: string, isManuallyOpen = false): 
   }
 }
 
-const MATCH_LOCK_MINUTES = 20
+const MATCH_LOCK_MINUTES = 10
 
 export function isMatchOpen(
   matchDate: string | null,
