@@ -25,15 +25,16 @@ export default async function QuinielaPage() {
         winner:winner_id(id, name, short_name, flag_emoji, group_name)
       `)
       .order('match_date', { ascending: true }),
-    admin.from('profiles').select('username, full_name, payment_status').eq('id', user!.id).single(),
+    admin.from('profiles').select('username, full_name, payment_status, inscription_paid').eq('id', user!.id).single(),
   ])
 
   const config        = configRes.data
   const state         = config ? getQuinielaState(config.close_date, config.is_manually_open) : null
   const openMatches   = (matchesRes.data ?? []).filter(m => !m.is_finished && isMatchOpen(m.match_date, config))
   const anyMatchOpen  = openMatches.length > 0
-  const username      = profileRes.data?.username || profileRes.data?.full_name || 'usuario'
-  const paymentStatus = profileRes.data?.payment_status ?? 'sin_iniciar'
+  const username       = profileRes.data?.username || profileRes.data?.full_name || 'usuario'
+  const paymentStatus  = profileRes.data?.payment_status ?? 'sin_iniciar'
+  const inscriptionPaid = profileRes.data?.inscription_paid ?? false
 
   // 👇 AGREGA AQUÍ
   console.log('CONFIG:', config)
@@ -108,23 +109,38 @@ export default async function QuinielaPage() {
 
       {!anyMatchOpen && <QuinielaLocked />}
 
-      {Object.entries(groups).map(([groupName, matches]) => (
-        <section key={groupName}>
-          <h2 className="font-display text-2xl text-pitch-300 tracking-widest uppercase mb-4 pb-2 border-b border-pitch-700/50">
-            {groupName}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {matches.map(match => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                isEditable={!match.is_finished && isMatchOpen(match.match_date, config)}
-                userId={user!.id}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {!inscriptionPaid ? (
+        <div className="card p-8 text-center space-y-3">
+          <div className="text-4xl">🔒</div>
+          <h2 className="font-display text-2xl text-white">Acceso restringido</h2>
+          <p className="text-pitch-400 max-w-sm mx-auto text-sm">
+            Solo los participantes con pago confirmado pueden ver y editar sus picks.
+            Completa tu pago para unirte a la competencia.
+          </p>
+          <a href="/dashboard/pago"
+            className="inline-block mt-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm transition-colors">
+            Ver instrucciones de pago →
+          </a>
+        </div>
+      ) : (
+        Object.entries(groups).map(([groupName, matches]) => (
+          <section key={groupName}>
+            <h2 className="font-display text-2xl text-pitch-300 tracking-widest uppercase mb-4 pb-2 border-b border-pitch-700/50">
+              {groupName}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {matches.map(match => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  isEditable={!match.is_finished && isMatchOpen(match.match_date, config)}
+                  userId={user!.id}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
 
       {/* Banner de pago al fondo — visible mientras la quiniela esté abierta */}
       {anyMatchOpen && (

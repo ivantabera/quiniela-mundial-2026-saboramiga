@@ -32,6 +32,13 @@ export async function POST(req: NextRequest) {
 
   const adminSupabase = createAdminSupabaseClient()
 
+  // Solo participantes con pago confirmado pueden guardar picks
+  const { data: userProfile } = await adminSupabase
+    .from('profiles').select('inscription_paid').eq('id', user.id).single()
+  if (!userProfile?.inscription_paid) {
+    return NextResponse.json({ error: 'Pago no confirmado', code: 'PAYMENT_REQUIRED' }, { status: 403 })
+  }
+
   let body: unknown
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
