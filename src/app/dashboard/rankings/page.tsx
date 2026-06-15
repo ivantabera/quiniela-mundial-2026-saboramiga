@@ -23,11 +23,11 @@ export default async function RankingsPage() {
       .select('id', { count: 'exact', head: true }),
   ])
 
-  const config      = configRes.data
+  const config       = configRes.data
   const totalMatches = totalMatchesRes.count ?? 72
-  const hasStarted  = (standingsRes.data?.length ?? 0) > 0
+  const hasStarted   = (standingsRes.data?.length ?? 0) > 0
 
-  // --- Vista pre-torneo: participantes con conteo de picks ---
+  // --- Vista pre-torneo ---
   let preRows: { id: string; username: string; full_name: string | null; picks: number }[] = []
   if (!hasStarted) {
     const { data: profiles } = await adminSupabase
@@ -53,7 +53,7 @@ export default async function RankingsPage() {
   }
 
   // --- Vista durante torneo ---
-  const rows = ((standingsRes.data ?? []) as unknown as StandingWithProfile[])
+  const rows      = ((standingsRes.data ?? []) as unknown as StandingWithProfile[])
     .filter(r => r.profile?.inscription_paid)
   const topPoints = rows[0]?.total_points ?? 0
   const winners   = rows.filter(r => r.total_points === topPoints && topPoints > 0)
@@ -64,7 +64,9 @@ export default async function RankingsPage() {
       <div>
         <h1 className="font-display text-4xl text-white tracking-wide">Rankings</h1>
         <p className="text-pitch-400">
-          {hasStarted ? 'Tabla de posiciones en tiempo real' : 'Participantes registrados · El ranking arranca con el primer partido'}
+          {hasStarted
+            ? 'Tabla de posiciones en tiempo real'
+            : 'Participantes registrados · El ranking arranca con el primer partido'}
         </p>
       </div>
 
@@ -78,42 +80,59 @@ export default async function RankingsPage() {
         </div>
       )}
 
-      {/* Aviso empate */}
-      {hasStarted && config && winners.length > 1 && (
-        <div className="card border-brand-600/40 bg-brand-900/20 p-5">
-          <p className="text-brand-300 font-semibold text-sm uppercase tracking-wider mb-1">⚠️ Empate en primer lugar</p>
-          <p className="text-white">
-            {winners.length} participantes empatados · La bolsa se divide:{' '}
-            <span className="text-yellow-400 font-bold">
-              ${prizeEach.toLocaleString('es-MX', { minimumFractionDigits: 0 })} {config.currency}
-            </span>{' '}
-            para cada ganador.
-          </p>
-        </div>
-      )}
+      {/* Sección Ganadores — todos los que comparten el puntaje más alto */}
+      {hasStarted && topPoints > 0 && (
+        <div className="card border-yellow-600/40 bg-yellow-950/10 p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <span className="text-4xl leading-none">🏆</span>
+            <div>
+              <h2 className="font-display text-2xl text-yellow-400 tracking-wide">
+                {winners.length === 1 ? 'Ganador' : 'Ganadores'}
+              </h2>
+              <p className="text-yellow-600/80 text-sm mt-0.5">
+                {topPoints} pts
+                {winners.length > 1 && ` · ${winners.length} participantes con el mismo puntaje`}
+                {config && (
+                  <>
+                    {' · '}
+                    <span className="text-yellow-400 font-semibold">
+                      ${prizeEach.toLocaleString('es-MX', { minimumFractionDigits: 0 })} {config.currency}
+                    </span>
+                    {' '}para {winners.length === 1 ? 'el ganador' : 'cada ganador'}
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
 
-      {/* Podio — solo durante el torneo con 3+ participantes */}
-      {hasStarted && rows.length >= 3 && (
-        <div className="flex items-end justify-center gap-4 pt-6 pb-4">
-          {[rows[1], rows[0], rows[2]].map((row, i) => {
-            const heights = ['h-24', 'h-32', 'h-20']
-            const medals  = ['🥈', '🥇', '🥉']
-            const positions = [2, 1, 3]
-            return (
-              <div key={row.user_id} className="flex flex-col items-center gap-2">
-                <span className="text-2xl">{medals[i]}</span>
-                <div className="text-center">
-                  <div className="text-white font-semibold text-sm">{row.profile.username}</div>
-                  <div className="text-pitch-400 text-xs">{row.total_points} pts</div>
+          <div className="flex flex-wrap gap-3">
+            {winners.map(w => {
+              const isMe = w.user_id === user?.id
+              return (
+                <div
+                  key={w.user_id}
+                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-colors ${
+                    isMe
+                      ? 'bg-yellow-700/25 border-yellow-500/50'
+                      : 'bg-pitch-800/60 border-yellow-700/25'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-yellow-800/60 flex items-center justify-center text-sm font-bold text-yellow-300 shrink-0">
+                    {w.profile.username[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold text-sm leading-tight">
+                      {w.profile.username}
+                      {isMe && <span className="ml-1.5 text-xs text-yellow-600/80">(tú)</span>}
+                    </div>
+                    {w.profile.full_name && (
+                      <div className="text-yellow-700/60 text-xs">{w.profile.full_name}</div>
+                    )}
+                  </div>
                 </div>
-                <div className={`${heights[i]} w-20 rounded-t-xl flex items-end justify-center pb-2 ${
-                  i === 1 ? 'bg-yellow-600/80' : i === 0 ? 'bg-gray-500/80' : 'bg-orange-700/80'
-                }`}>
-                  <span className="font-display text-2xl text-white">#{positions[i]}</span>
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -133,20 +152,25 @@ export default async function RankingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, idx) => {
+                {rows.map(row => {
                   const isCurrentUser = row.user_id === user?.id
-                  const isWinner = row.total_points === topPoints && topPoints > 0
+                  const isWinner      = row.total_points === topPoints && topPoints > 0
                   return (
-                    <tr key={row.user_id} className={`border-b border-pitch-800/50 transition-colors ${
-                      isCurrentUser ? 'bg-pitch-700/30' : 'hover:bg-pitch-800/30'
-                    } ${isWinner ? 'border-l-2 border-l-yellow-500' : ''}`}>
+                    <tr
+                      key={row.user_id}
+                      className={`border-b border-pitch-800/50 transition-colors ${
+                        isCurrentUser ? 'bg-pitch-700/30' : 'hover:bg-pitch-800/30'
+                      } ${isWinner ? 'border-l-2 border-l-yellow-500' : ''}`}
+                    >
+                      {/* Posición — mismo número para todos los empatados */}
                       <td className="px-4 py-4">
-                        <span className={`font-display text-xl ${
-                          idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-400' : 'text-pitch-400'
-                        }`}>
-                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${row.rank}`}
-                        </span>
+                        {isWinner ? (
+                          <span className="font-display text-xl text-yellow-400">🏆</span>
+                        ) : (
+                          <span className="font-display text-xl text-pitch-400">#{row.rank}</span>
+                        )}
                       </td>
+
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-pitch-700 flex items-center justify-center text-sm font-bold text-pitch-300">
@@ -161,12 +185,15 @@ export default async function RankingsPage() {
                           </div>
                         </div>
                       </td>
+
                       <td className="px-4 py-4 text-center">
                         <span className="font-display text-xl text-white">{row.total_points}</span>
                       </td>
+
                       <td className="px-4 py-4 text-center hidden sm:table-cell">
                         <span className="text-brand-400 text-sm">✓ {row.correct_results}</span>
                       </td>
+
                       <td className="px-4 py-4 text-center hidden sm:table-cell">
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-16 bg-pitch-800 rounded-full h-1.5">
@@ -175,6 +202,7 @@ export default async function RankingsPage() {
                           <span className="text-pitch-400 text-xs">{row.completion_pct}%</span>
                         </div>
                       </td>
+
                       {config && (
                         <td className="px-4 py-4 text-center">
                           {isWinner

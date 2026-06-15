@@ -1,8 +1,8 @@
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase/server'
 import { getQuinielaState, isMatchOpen } from '@/lib/utils/quiniela-status'
-import MatchCard from '@/components/quiniela/MatchCard'
 import QuinielaLocked from '@/components/quiniela/QuinielaLocked'
 import QuinielaExportButtons from '@/components/quiniela/QuinielaExportButtons'
+import QuinielaMatchList from '@/components/quiniela/QuinielaMatchList'
 import PaymentStatusBanner from '@/components/shared/PaymentStatusBanner'
 import type { MatchWithTeams } from '@/types/database'
 
@@ -36,12 +36,6 @@ export default async function QuinielaPage() {
   const paymentStatus  = profileRes.data?.payment_status ?? 'sin_iniciar'
   const inscriptionPaid = profileRes.data?.inscription_paid ?? false
 
-  // 👇 AGREGA AQUÍ
-  console.log('CONFIG:', config)
-  console.log('STATE isOpen:', state?.isOpen)
-  console.log('MATCHES count:', matchesRes.data?.length, 'error:', matchesRes.error)
-
-
   // Obtener picks del usuario
   const { data: userPicks } = await supabase
     .from('picks')
@@ -59,14 +53,6 @@ export default async function QuinielaPage() {
     ...m,
     user_pick: picksMap.get(m.id) ?? null,
   }))
-
-  // Agrupar por etapa
-  const groups = matchesWithPicks.reduce<Record<string, MatchWithTeams[]>>((acc, m) => {
-    const key = m.group_name ? `Grupo ${m.group_name}` : formatStage(m.stage)
-    if (!acc[key]) acc[key] = []
-    acc[key].push(m)
-    return acc
-  }, {})
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -123,23 +109,11 @@ export default async function QuinielaPage() {
           </a>
         </div>
       ) : (
-        Object.entries(groups).map(([groupName, matches]) => (
-          <section key={groupName}>
-            <h2 className="font-display text-2xl text-pitch-300 tracking-widest uppercase mb-4 pb-2 border-b border-pitch-700/50">
-              {groupName}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {matches.map(match => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  isEditable={!match.is_finished && isMatchOpen(match.match_date, config)}
-                  userId={user!.id}
-                />
-              ))}
-            </div>
-          </section>
-        ))
+        <QuinielaMatchList
+          matches={matchesWithPicks}
+          config={config}
+          userId={user!.id}
+        />
       )}
 
       {/* Banner de pago al fondo — visible mientras la quiniela esté abierta */}
@@ -148,16 +122,4 @@ export default async function QuinielaPage() {
       )}
     </div>
   )
-}
-
-function formatStage(stage: string): string {
-  const map: Record<string, string> = {
-    round_of_32:  'Ronda de 32',
-    round_of_16:  'Octavos de Final',
-    quarters:     'Cuartos de Final',
-    semis:        'Semifinales',
-    third_place:  'Tercer Lugar',
-    final:        '🏆 Gran Final',
-  }
-  return map[stage] ?? stage
 }
