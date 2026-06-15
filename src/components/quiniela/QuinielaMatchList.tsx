@@ -49,7 +49,7 @@ export default function QuinielaMatchList({ matches, config, userId }: Props) {
       }
       map.get(key)!.matches.push(m)
     }
-    const all     = [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+    const all     = Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
     const future  = all.filter(([k]) => k >= todayKey)
     const past    = all.filter(([k]) => k < todayKey && k !== 'zz-sin-fecha')
     const noDate  = all.filter(([k]) => k === 'zz-sin-fecha')
